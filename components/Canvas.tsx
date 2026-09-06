@@ -173,6 +173,47 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       const h = primary.h ?? partSize(primary.kind).h;
       const o = d.origins.get(d.ids[0])!;
 
+      // live space conversion: the moment the pointer crosses a screen boundary
+      // the parts tear off the screen (to world coordinates) or drop back into
+      // it (clamped to local coordinates), so a drag never gets stuck inside
+      const ptNow = toDoc(e.clientX, e.clientY);
+      const desired = hitScreen(doc, ptNow.x, ptNow.y)?.id ?? null;
+      if (desired !== d.space.id) {
+        const from = doc.screens.find((s) => s.id === d.space.id);
+        if (d.space.id !== null && from) {
+          // screen → workspace: world coordinates, rebased on the committed spots
+          mutate((doc0) => {
+            const parts = doc0.parts.map((p) =>
+              d.ids.includes(p.id) && p.screen !== null ? { ...p, screen: null, x: from.x + p.x, y: from.y + p.y } : p,
+            );
+            for (const np of parts) if (d.ids.includes(np.id)) d.origins.set(np.id, { x: np.x, y: np.y });
+            return { ...doc0, parts };
+          }, `drag:${d.ids[0]}`);
+        } else if (d.space.id === null && hitScreen(doc, ptNow.x, ptNow.y)) {
+          // workspace → screen: clamped into local coordinates
+          const to = hitScreen(doc, ptNow.x, ptNow.y)!;
+          mutate((doc0) => {
+            const parts = doc0.parts.map((p) => {
+              if (!d.ids.includes(p.id) || p.screen !== null) return p;
+              const pw = p.w ?? partSize(p.kind, p).w;
+              const ph = p.h ?? partSize(p.kind, p).h;
+              return {
+                ...p,
+                screen: to.id,
+                x: clamp(p.x - to.x, 0, Math.max(0, SCREEN_W - pw)),
+                y: clamp(p.y - to.y, 0, Math.max(0, SCREEN_H - ph)),
+              };
+            });
+            for (const np of parts) if (d.ids.includes(np.id)) d.origins.set(np.id, { x: np.x, y: np.y });
+            return { ...doc0, parts };
+          }, `drag:${d.ids[0]}`);
+        }
+        d.space = { id: desired };
+        d.sx = e.clientX;
+        d.sy = e.clientY;
+        return; // this move only re-based the drag
+      }
+
       // base position: free with Alt, else on the 8pt grid
       const grid = e.altKey ? (v: number) => v : (v: number) => Math.round(v / 8) * 8;
       let nx = grid(o.x + dx);
@@ -182,7 +223,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       const lines: (GuideLine & { equal?: boolean })[] = [];
       if (!e.altKey) {
         const targets = snapTargetsFor({
-          screen: { id: primary.screen },
+          screen: { id: d.space.id },
           doc,
           width: (p) => p.w ?? partSize(p.kind).w,
           height: (p) => p.h ?? partSize(p.kind).h,
@@ -210,10 +251,10 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       // the rendered position (grid() alone would swallow the correction)
       const corrX = nx - grid(o.x + dx);
       const corrY = ny - grid(o.y + dy);
-      const free = primary.screen === null;
+      const free = d.space.id === null;
       if (lines.length) {
         setGuides(lines);
-        setGuideScreen(free ? "__canvas" : primary.screen);
+        setGuideScreen(free ? "__canvas" : d.space.id);
       } else if (guideScreen) {
         clearGuides();
       }
@@ -248,40 +289,9 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     const d = drag.current;
     drag.current = null;
     clearGuides();
-    if (!d || d.mode !== "part" || !e) return;
-    const primary = doc.parts.find((p) => p.id === d.ids[0]);
-    if (!primary) return;
-    // where the pointer lands decides what the parts belong to now
-    if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) <= 2) return; // a click, not a move
-    const pt = toDoc(e.clientX, e.clientY);
-    const target = hitScreen(doc, pt.x, pt.y);
-    if (primary.screen === null && target) {
-      // canvas part dropped on a screen: becomes that screen's part
-      mutate((doc0) => ({
-        ...doc0,
-        parts: doc0.parts.map((p) => {
-          if (!d.ids.includes(p.id) || p.screen !== null) return p;
-          const w = p.w ?? partSize(p.kind, p).w;
-          const h = p.h ?? partSize(p.kind, p).h;
-          return {
-            ...p,
-            screen: target.id,
-            x: clamp(p.x - target.x, 0, Math.max(0, SCREEN_W - w)),
-            y: clamp(p.y - target.y, 0, Math.max(0, SCREEN_H - h)),
-          };
-        }),
-      }));
-    } else if (primary.screen !== null && !target) {
-      // screen part dropped on the workspace: becomes a canvas-level part
-      const from = doc.screens.find((s) => s.id === primary.screen);
-      if (!from) return;
-      mutate((doc0) => ({
-        ...doc0,
-        parts: doc0.parts.map((p) =>
-          d.ids.includes(p.id) && p.screen !== null ? { ...p, screen: null, x: from.x + p.x, y: from.y + p.y } : p,
-        ),
-      }));
-    }
+    // space conversion happened live during the move, when the pointer crossed
+    // the screen boundary; releasing only ends the drag
+    void e;
   };
 
   // palette drop
