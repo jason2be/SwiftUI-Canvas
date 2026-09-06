@@ -215,7 +215,7 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                   <button className="icon-btn sm" onClick={() => onOpenIcon(part.id, `opt:${i}`)}>
                     {o.icon ? <Icon name={o.icon} size={14} /> : "—"}
                   </button>
-                  {part.kind === "tabBar" && (
+                  {["tabBar", "list", "alert"].includes(part.kind) && (
                     <select
                       value={o.target ?? ""}
                       onChange={(e) => {

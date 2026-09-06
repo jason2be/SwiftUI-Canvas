@@ -112,9 +112,9 @@ Fields any part may carry:
 | `picker` | menu Picker | `label`, `options`, `selected` | 361 × 60 |
 | `textField` | TextField | `label`, `supporting` placeholder, `icon` | 361 × 64 |
 | `searchField` | .searchable bar | `label` placeholder | 361 × 40 |
-| `list` | List with rows | `options` `{label, icon}`, `variant` `insetGrouped` / `plainList` | 361 × 44 × rows |
+| `list` | List with rows | `options` `{label, icon, target}`, `variant` `insetGrouped` / `plainList` | 361 × 44 × rows |
 | `card` | card | `label`, `supporting`, `icon`, `variant` `filled` / `stroke`, `w`, `h` | 361 × 140 |
-| `alert` | .alert | `label` title, `supporting` message, `options` as buttons | 270 wide |
+| `alert` | .alert | `label` title, `supporting` message, `options` as buttons `{label, target}` | 270 wide |
 | `sheet` | .sheet | `label`, `supporting`, `h` | 393 × 260 |
 | `progress` | ProgressView | `variant` `linear` / `circular`, `value` (omit for indeterminate) | 300 × 20 |
 | `gauge` | Gauge | `label`, `value` 0–100 | 160 × 120 |
@@ -131,7 +131,7 @@ Icons are **SF Symbols** names (`house`, `gearshape`, `plus`, `person`, `magnify
 
 - Leave what the app does not need empty: `"icon": null`, no `icon2`, no `note`, no `supporting`. A nav bar with just a title is normal.
 - Do not add parts to fill space. A screen with a bar, a list and one action is complete.
-- One idea per screen; close your navigation: list rows and buttons open detail screens, detail screens get a way back (`"target": "back"`), the tab bar links its items with `target`.
+- One idea per screen; close your navigation: list rows and buttons open detail screens (a row's `options[].target` works like a tab item's), detail screens get a way back (`"target": "back"`), the tab bar links its items with `target`.
 - Real labels in the person's language, not lorem ipsum. Match the language of the request.
 - Three to five screens is plenty. Leave polish to the person: they will tidy, retheme, and edit.
 

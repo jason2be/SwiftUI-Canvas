@@ -8,6 +8,7 @@ import {
   type Option,
   type Part,
   type Screen,
+  partSize,
   partsOf,
   screenName,
   variantOf,
@@ -99,7 +100,7 @@ function themeText(doc: Doc): string {
 function optionsText(lang: Lang, options: Option[], withTargets: boolean, doc: Doc): string {
   return options
     .map((o) => {
-      const t = withTargets && o.target ? `${lang === "zh" ? "，跳转到" : " opens "} ${screenName(doc, o.target, "?")}` : "";
+      const t = withTargets && o.target ? (lang === "zh" ? `，跳转到 ${screenName(doc, o.target, "?")}` : ` opens ${screenName(doc, o.target, "?")}`) : "";
       return `${q(lang, o.label || (lang === "zh" ? "无标签" : "no label"))}${o.icon ? ` (${o.icon})` : ""}${t}`;
     })
     .join(lang === "zh" ? "、" : ", ");
@@ -136,7 +137,7 @@ function partZh(part0: Part, doc: Doc): string {
     case "tabBar":
       return `标签栏 TabView：${optionsText("zh", it.options ?? [], true, doc)}${selText("zh", it.selected ?? 0)}`;
     case "list":
-      return `${it.variant === "insetGrouped" ? "内嵌分组列表 List" : "普通列表 List"}：${optionsText("zh", it.options ?? [], false, doc)}；每行尾部有 chevron.right`;
+      return `${it.variant === "insetGrouped" ? "内嵌分组列表 List" : "普通列表 List"}：${optionsText("zh", it.options ?? [], true, doc)}${(it.options ?? []).some((o) => o.target) ? "；点击行进入对应屏幕" : "；每行尾部有 chevron.right"}`;
     case "card":
       return `${v}卡片：标题 ${label("zh", it.label)}${hasText(it.supporting) ? `，正文 ${label("zh", it.supporting)}` : ""}${it.icon ? `，左上角图标 ${it.icon}` : ""}`;
     case "alert":
@@ -211,11 +212,11 @@ function partEn(part0: Part, doc: Doc): string {
     case "tabBar":
       return `A tab bar (TabView) with the items ${optionsText("en", it.options ?? [], true, doc)}${selText("en", it.selected ?? 0)}`;
     case "list":
-      return `An ${it.variant === "insetGrouped" ? "inset grouped List" : "plain List"} with the rows ${optionsText("en", it.options ?? [], false, doc)}; each row ends with a chevron.right`;
+      return `An ${it.variant === "insetGrouped" ? "inset grouped List" : "plain List"} with the rows ${optionsText("en", it.options ?? [], true, doc)}${(it.options ?? []).some((o) => o.target) ? "; tapping a row opens its screen" : "; each row ends with a chevron.right"}`;
     case "card":
       return `A ${v} card titled ${label("en", it.label)}${hasText(it.supporting) ? ` with the body ${label("en", it.supporting)}` : ""}${it.icon ? ` and a ${it.icon} icon at the top` : ""}`;
     case "alert":
-      return `An .alert titled ${label("en", it.label)} with the message ${label("en", it.supporting)} and the buttons ${optionsText("en", it.options ?? [], false, doc)}`;
+      return `An .alert titled ${label("en", it.label)} with the message ${label("en", it.supporting)} and the buttons ${optionsText("en", it.options ?? [], true, doc)}`;
     case "sheet":
       return `A .sheet titled ${label("en", it.label)}${hasText(it.supporting) ? ` containing ${label("en", it.supporting)}` : ""} (with a grabber at the top)`;
     case "progress":
@@ -280,8 +281,32 @@ function screenText(lang: Lang, doc: Doc, screen: Screen, withHeading: boolean):
   for (const bar of bars) {
     lines.push(`- ${partText(lang, bar, doc)}${noteText(lang, bar)}${linkText(lang, bar, doc)}`);
   }
-  for (const p of rest) {
-    lines.push(`- ${partText(lang, p, doc)}${noteText(lang, p)}${linkText(lang, p, doc)}`);
+
+  // visual reading order: top-to-bottom, left-to-right; parts whose vertical
+  // spans overlap share a row (the same grouping tidy uses) and emit as one line
+  const sorted = [...rest].sort((a, b) => a.y - b.y || a.x - b.x);
+  const rows: Part[][] = [];
+  for (const p of sorted) {
+    const h = p.h ?? partSize(p.kind, p).h;
+    const row = rows.find((r) => {
+      const top = Math.min(...r.map((q) => q.y));
+      const bottom = Math.max(...r.map((q) => q.y + partSize(q.kind, q).h));
+      return p.y < bottom && p.y + h > top;
+    });
+    if (row) row.push(p);
+    else rows.push([p]);
+  }
+  for (const row of rows) {
+    if (row.length === 1) {
+      const p = row[0];
+      lines.push(`- ${partText(lang, p, doc)}${noteText(lang, p)}${linkText(lang, p, doc)}`);
+    } else {
+      const items = [...row]
+        .sort((a, b) => a.x - b.x)
+        .map((p) => `[${partText(lang, p, doc)}${linkText(lang, p, doc)}]`)
+        .join(lang === "zh" ? "，" : ", ");
+      lines.push(`- ${lang === "zh" ? "一行：" : "One row, left to right: "}${items}`);
+    }
   }
   if (hasText(screen.note)) lines.push(lang === "zh" ? `- 屏幕说明：${screen.note}` : `- Screen note: ${screen.note}`);
   return lines.join("\n");

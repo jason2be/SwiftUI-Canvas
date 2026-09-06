@@ -103,11 +103,13 @@ export default function Page() {
           break;
         }
         case "Escape":
-          setShowPreview(false);
-          setShowPrompt(false);
-          setShowTheme(false);
-          setIconTarget(null);
-          setSel([]);
+          // the preview owns Escape while open: it pops one screen at a time
+          if (!showPreview) {
+            setShowPrompt(false);
+            setShowTheme(false);
+            setIconTarget(null);
+            setSel([]);
+          }
           break;
         case "Delete":
         case "Backspace":

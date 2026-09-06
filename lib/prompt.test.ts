@@ -82,4 +82,50 @@ describe("buildPrompt", () => {
     const pe = buildPrompt(doc, { kind: "all" }, "en");
     expect(pe).toContain("system status bar");
   });
+
+  it("wires list row targets into the brief like tab items", () => {
+    const d: Doc = newDoc("en");
+    d.screens.push({ id: "s2", name: "Detail", x: 600, y: 60 });
+    d.parts.push({
+      id: "l1",
+      screen: d.screens[0].id,
+      kind: "list",
+      x: 16,
+      y: 200,
+      label: "",
+      variant: "insetGrouped",
+      options: [
+        { label: "Tea", target: "s2" },
+        { label: "Coffee" },
+      ],
+    });
+    const zh = buildPrompt(d, { kind: "screen", id: d.screens[0].id }, "zh");
+    expect(zh).toContain("，跳转到 Detail");
+    expect(zh).toContain("点击行进入对应屏幕");
+    const en = buildPrompt(d, { kind: "screen", id: d.screens[0].id }, "en");
+    expect(en).toMatch(/opens Detail/);
+    expect(en).toContain("tapping a row opens its screen");
+  });
+
+  it("orders the brief by visual position, not z-order", () => {
+    const d: Doc = newDoc("en");
+    // array order: low part first; visual order must invert it
+    d.parts.push({ id: "low", screen: d.screens[0].id, kind: "text", x: 16, y: 500, label: "second line", variant: "body" });
+    d.parts.push({ id: "high", screen: d.screens[0].id, kind: "text", x: 16, y: 200, label: "first line", variant: "body" });
+    const p = buildPrompt(d, { kind: "screen", id: d.screens[0].id }, "en");
+    expect(p.indexOf("first line")).toBeLessThan(p.indexOf("second line"));
+  });
+
+  it("groups parts that share a row onto one line", () => {
+    const d: Doc = newDoc("en");
+    d.parts.push(
+      { id: "a", screen: d.screens[0].id, kind: "button", x: 16, y: 210, label: "Start", variant: "borderedProminent" },
+      { id: "b", screen: d.screens[0].id, kind: "toggle", x: 250, y: 212, label: "Weekly", variant: "plain", checked: true },
+    );
+    const p = buildPrompt(d, { kind: "screen", id: d.screens[0].id }, "en");
+    const rowLine = p.split("\n").find((l) => l.includes("One row, left to right"));
+    expect(rowLine).toBeTruthy();
+    expect(rowLine).toContain("Start");
+    expect(rowLine).toContain("Weekly");
+  });
 });

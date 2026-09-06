@@ -111,28 +111,37 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
     };
   };
 
-  /* tab items navigate through options[].target; an invisible hit zone is
-   * laid over each item because the tabs render inside SwiftPart */
-  const tabTapsOf = (p: Part) => {
-    if (p.kind !== "tabBar") return null;
+  /* options carry targets on tab bars, list rows and alert buttons; an
+   * invisible hit zone is laid over each rendered option because they draw
+   * inside SwiftPart. Geometry follows each kind's own layout. */
+  const optionTapsOf = (p: Part) => {
+    if (p.kind !== "tabBar" && p.kind !== "list" && p.kind !== "alert") return null;
     const opts = p.options ?? [];
     const w = (p.w ?? 393) / Math.max(1, opts.length);
-    const h = p.h ?? 83;
+    const rowH = 44;
+    const zone = (i: number) =>
+      p.kind === "tabBar"
+        ? { left: p.x + i * w, top: p.y, width: w, height: p.h ?? 83 }
+        : p.kind === "list"
+          ? { left: p.x, top: p.y + rowH + i * rowH, width: p.w ?? 361, height: rowH }
+          : { left: p.x + i * ((p.w ?? 270) / opts.length), top: p.y + (p.h ?? 124) - 44, width: (p.w ?? 270) / opts.length, height: 44 };
+    const transition = p.kind === "list" ? "push" : "none";
     return opts.map((o, i) => {
       if (!o.target) return null;
       const go = () => {
         if (o.target === BACK_TARGET) {
-          if (stack.length > 1) navigate("", "none", true);
+          if (stack.length > 1) navigate("", transition, true);
         } else {
-          navigate(o.target!, "none");
+          navigate(o.target!, transition);
         }
       };
+      const z = zone(i);
       return (
         <button
           key={i}
           aria-label={o.label}
           className="preview-tabzone"
-          style={{ left: p.x + i * w, top: p.y, width: w, height: h }}
+          style={{ left: z.left, top: z.top, width: z.width, height: z.height }}
           onClick={go}
         />
       );
@@ -171,7 +180,7 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
             {partsOf(doc, under.id).map((p) => {
               const interactive = !anim && under.id === top;
               const tap = interactive ? tapOf(p) : undefined;
-              const tabZones = interactive ? tabTapsOf(p) : null;
+              const tabZones = interactive ? optionTapsOf(p) : null;
               return (
                 <React.Fragment key={p.id}>
                   <div
