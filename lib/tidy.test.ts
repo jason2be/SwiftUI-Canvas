@@ -1,37 +1,91 @@
 import { describe, expect, it } from "vitest";
-import { newDoc } from "./tokens";
 import { tidyScreen } from "./tidy";
+import type { Doc, Part } from "./tokens";
+
+const part = (id: string, kind: Part["kind"], x: number, y: number, extra: Partial<Part> = {}): Part =>
+  ({ id, screen: "s1", kind, x, y, label: "", ...extra } as Part);
+
+const doc = (...parts: Part[]): Doc => ({
+  title: "T",
+  lang: "en",
+  platform: "ios",
+  theme: { accent: "systemBlue", scheme: "light", shape: "default", font: "system" },
+  screens: [{ id: "s1", name: "A", x: 0, y: 0 }],
+  parts,
+});
+
+const pos = (parts: Part[] | null, id: string) => {
+  const p = parts!.find((q) => q.id === id)!;
+  return { x: p.x, y: p.y };
+};
 
 describe("tidyScreen", () => {
-  it("pins bars to the edges and stacks the rest", () => {
-    const doc = newDoc("en");
-    const home = doc.screens[0].id;
-    doc.parts.push(
-      { id: "t1", screen: home, kind: "text", x: 80, y: 300, label: "Hello", variant: "body" },
-      { id: "b1", screen: home, kind: "button", x: 40, y: 380, label: "Go", variant: "bordered" }
-    );
-    const next = tidyScreen(doc, home)!;
-    expect(next).not.toBeNull();
-    const nav = next.find((p) => p.id !== "t1" && p.id !== "b1") ?? next[0];
-    const bar = next.find((p) => p.kind === "navBar");
-    const tab = next.find((p) => p.kind === "tabBar");
-    expect(bar?.x).toBe(0);
-    expect(bar?.y).toBe(0);
-    expect(tab?.y).toBeGreaterThan(700);
-    const text = next.find((p) => p.id === "t1")!;
-    const button = next.find((p) => p.id === "b1")!;
-    expect(text.x).toBe(16);
-    expect(button.x).toBe(16);
-    expect(button.y).toBeGreaterThanOrEqual(text.y);
+  it("anchors bars to their edges", () => {
+    const d = tidyScreen(doc(part("n", "navBar", 12, 40), part("t", "tabBar", 5, 600)), "s1")!;
+    expect(pos(d, "n")).toEqual({ x: 0, y: 0 });
+    expect(pos(d, "t").y).toBe(852 - 83);
+    expect(pos(d, "t").x).toBe(0);
   });
 
-  it("returns null when nothing moves", () => {
-    const doc = newDoc("en");
-    const home = doc.screens[0].id;
-    // strip to a single tidy nav bar at the exact tidy position
-    doc.parts = doc.parts.filter((p) => p.kind === "navBar");
-    doc.parts[0].x = 0;
-    doc.parts[0].y = 0;
-    expect(tidyScreen(doc, home)).toBeNull();
+  it("stacks lone parts on the left margin from the top with 16pt gaps", () => {
+    const d = tidyScreen(
+      doc(
+        part("a", "text", 20, 300, { label: "a" }),
+        part("b", "text", 20, 470, { label: "b" }),
+        part("c", "button", 10, 650, { label: "c" }),
+      ),
+      "s1",
+    )!;
+    const a = pos(d, "a");
+    const b = pos(d, "b");
+    const c = pos(d, "c");
+    expect(a.x).toBe(16);
+    expect(b.x).toBe(16);
+    expect(c.x).toBe(16);
+    expect(b.y - a.y).toBe(21 + 16); // default text height + one row gap
+  });
+
+  it("keeps rows: overlapping parts share a row with 8pt gaps, order preserved", () => {
+    const d = tidyScreen(
+      doc(
+        part("label", "text", 16, 200, { label: "name" }),
+        part("btn", "button", 250, 202, { label: "go" }),
+      ),
+      "s1",
+    )!;
+    const l = pos(d, "label");
+    const b = pos(d, "btn");
+    expect(l.x).toBe(16);
+    expect(b.x).toBe(16 + 300 + 8); // text is 300 wide, packed with an 8pt gap
+    const dy = Math.abs(b.y - l.y);
+    expect(dy).toBeGreaterThanOrEqual(14); // the text is vertically centred in the 50pt row
+    expect(dy).toBeLessThanOrEqual(15);
+  });
+
+  it("keeps a row's side: a right-aligned row stays right", () => {
+    const d = tidyScreen(
+      doc(part("b", "iconButton", 270, 210, { icon: "plus" }), part("b2", "iconButton", 329, 212, { icon: "minus" })),
+      "s1",
+    )!;
+    const b = pos(d, "b");
+    const b2 = pos(d, "b2");
+    expect(b2.x + 44).toBe(393 - 16); // flush to the right margin
+    expect(b2.x - (b.x + 44)).toBe(8);
+  });
+
+  it("keeps a centred row centred", () => {
+    const d = tidyScreen(doc(part("b", "button", 136, 210, { label: "go" })), "s1")!;
+    const b = pos(d, "b");
+    expect(b.x).toBe(Math.round((393 - 160) / 2));
+  });
+
+  it("returns null when nothing would move", () => {
+    const d = doc(part("n", "navBar", 0, 0), part("t", "text", 16, 100, { label: "a" }));
+    expect(tidyScreen(d, "s1")).toBeNull();
+  });
+
+  it("leaves canvas-level parts alone", () => {
+    const d = doc(part("c", "text", 500, 900, { label: "scratch", screen: null as unknown as string }));
+    expect(tidyScreen(d, "s1")).toBeNull();
   });
 });

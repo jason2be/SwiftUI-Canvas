@@ -6,8 +6,11 @@ import {
   BACK_TARGET,
   KIND_VARIANTS,
   SCREEN_BGS,
+  SCREEN_H,
+  SCREEN_W,
   duplicatePart,
   partsOf,
+  partSize,
   screenById,
   type Part,
   type Screen,
@@ -244,6 +247,32 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
 
           {LINKABLE.includes(part.kind) && (
             <>
+              <Field label={t("field.screen")}>
+                <select
+                  value={part.screen ?? "__canvas"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const from = doc.screens.find((s) => s.id === part.screen);
+                    if (v === "__canvas") {
+                      if (part.screen === null) return;
+                      patch(part.id, { screen: null, x: (from?.x ?? 0) + part.x, y: (from?.y ?? 0) + part.y });
+                    } else {
+                      const to = doc.screens.find((s) => s.id === v);
+                      if (!to) return;
+                      patch(part.id, {
+                        screen: to.id,
+                        x: Math.min(Math.max(0, part.x - (from?.x ?? to.x)), Math.max(0, SCREEN_W - (part.w ?? partSize(part.kind, part).w))),
+                        y: Math.min(Math.max(0, part.y - (from?.y ?? to.y)), Math.max(0, SCREEN_H - (part.h ?? partSize(part.kind, part).h))),
+                      });
+                    }
+                  }}
+                >
+                  {doc.screens.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                  <option value="__canvas">{t("field.canvas")}</option>
+                </select>
+              </Field>
               <Field label={t("field.link")}>
                 <select
                   value={part.link?.target ?? ""}

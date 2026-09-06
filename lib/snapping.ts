@@ -50,10 +50,10 @@ export interface SnapResult {
 /* ---------- target collection ---------- */
 
 export function snapTargetsFor(args: {
-  screen: { id: string };
+  screen: { id: string | null };
   doc: {
     screens: { id: string }[];
-    parts: { id: string; screen: string; kind: Kind; x: number; y: number; w?: number; h?: number }[];
+    parts: { id: string; screen: string | null; kind: Kind; x: number; y: number; w?: number; h?: number }[];
   };
   width: (p: { kind: Kind; w?: number }) => number;
   height: (p: { kind: Kind; h?: number }) => number;
@@ -61,14 +61,15 @@ export function snapTargetsFor(args: {
    * or the part chases its last committed position */
   exclude?: string[];
 }): SnapTargets {
-  const xs: number[] = [
+  // screen anchors apply only on a screen; canvas-level parts snap to each other
+  const xs: number[] = args.screen.id === null ? [] : [
     0,
     SCREEN_W,
     SCREEN_W / 2,
     MARGIN,
     SCREEN_W - MARGIN,
   ];
-  const ys: number[] = [
+  const ys: number[] = args.screen.id === null ? [] : [
     0,
     SCREEN_H,
     SCREEN_H / 2,

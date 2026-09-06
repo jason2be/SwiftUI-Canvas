@@ -183,7 +183,9 @@ export interface Link {
 
 export interface Part {
   id: string;
-  screen: string;
+  /** the screen this part sits on, or null for a canvas-level part that lives
+   *  on the workspace (in world coordinates) and never enters the prompt */
+  screen: string | null;
   kind: Kind;
   x: number;
   y: number;
@@ -394,7 +396,7 @@ export function variantOf(p: Pick<Part, "kind" | "variant">): Variant {
   return list.includes(p.variant) ? p.variant : list[0];
 }
 
-export function defaultPart(lang: Lang, screenId: string, kind: Kind, x: number, y: number): Part {
+export function defaultPart(lang: Lang, screenId: string | null, kind: Kind, x: number, y: number): Part {
   const base: Part = {
     id: newId(),
     screen: screenId,

@@ -27,7 +27,7 @@ const validLink = (l: unknown): boolean =>
 const validPart = (p: unknown): boolean =>
   isRecord(p) &&
   typeof p.id === "string" &&
-  typeof p.screen === "string" &&
+  (p.screen === null || typeof p.screen === "string") &&
   typeof p.kind === "string" &&
   KINDS.has(p.kind) &&
   (p.label === undefined || typeof p.label === "string") &&

@@ -63,4 +63,15 @@ describe("buildPrompt", () => {
     const p = buildPrompt(d, { kind: "all" }, "en");
     expect(p).toContain("opens the screen Detail with a zoom transition");
   });
+
+  it("never mentions canvas-level parts", () => {
+    const d: Doc = newDoc("en");
+    d.screens.push({ id: "s2", name: "Detail", x: 600, y: 60 });
+    d.parts.push({ id: "c1", screen: null, kind: "text", x: 1200, y: 300, label: "scratch note", variant: "body" });
+    const p = buildPrompt(d, { kind: "all" }, "en");
+    expect(p).not.toContain("scratch note");
+    // and the screen part still lands
+    d.parts.push({ id: "v1", screen: "s2", kind: "text", x: 16, y: 200, label: "visible", variant: "body" });
+    expect(buildPrompt(d, { kind: "screen", id: "s2" }, "en")).toContain("visible");
+  });
 });

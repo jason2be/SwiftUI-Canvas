@@ -348,6 +348,21 @@ body {
   cursor: pointer;
 }
 
+/* canvas-level parts live on the workspace, outside any screen */
+.canvas-part {
+  z-index: 1;
+}
+
+.canvas-part::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* link arrows */
 .part-link-badge {
   position: absolute;
   right: -10px;

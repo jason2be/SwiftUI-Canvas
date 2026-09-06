@@ -57,7 +57,7 @@ export default function Page() {
       const targets = activeScreen ? [activeScreen] : d.screens.map((s) => s.id);
       const byScreen = new Map(targets.map((id) => [id, tidyScreen(d, id)]));
       if (![...byScreen.values()].some(Boolean)) return d;
-      return { ...d, parts: d.parts.map((p) => byScreen.get(p.screen)?.find((np) => np.id === p.id) ?? p) };
+      return { ...d, parts: d.parts.map((p) => (p.screen ? (byScreen.get(p.screen)?.find((np) => np.id === p.id) ?? p) : p)) };
     });
   };
 

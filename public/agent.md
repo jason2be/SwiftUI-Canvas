@@ -77,6 +77,8 @@ A screen is **393 × 852** logical points (iPhone). Place screens side by side o
 
 Every part has `id`, `screen` (a screen id), `kind`, `variant`, `label` (may be `""`), and **screen-relative** `x`/`y` (0…393, 0…852 from the screen's top-left — not canvas coordinates). Later parts draw on top of earlier ones.
 
+`"screen": null` is a special case: the part sits on the workspace canvas in world coordinates, visible while the person works but part of no screen — it never enters the prompt or the preview. Use it only if the person asks for workspace notes; normally every part belongs to a screen.
+
 ```json
 { "id": "nav", "screen": "home", "kind": "navBar", "x": 0, "y": 0, "label": "Timers", "icon": null, "icon2": "plus", "variant": "large" }
 { "id": "row1", "screen": "home", "kind": "list", "x": 16, "y": 120, "label": "", "variant": "insetGrouped",

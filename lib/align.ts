@@ -61,15 +61,17 @@ export function alignParts(
   const moving = doc.parts.filter((p) => ids.has(p.id));
   if (!moving.length) return null;
   const screenId = moving[0].screen;
-  if (moving.some((p) => p.screen !== screenId)) return null; // one screen at a time
+  if (moving.some((p) => p.screen !== screenId)) return null; // one space at a time
+  const onCanvas = screenId === null;
 
   const rects = new Map(moving.map((p) => [p.id, rectOf(p)] as const));
   const distributing = kind === "distributeH" || kind === "distributeV";
   const horizontal = kind === "left" || kind === "centerH" || kind === "right" || kind === "distributeH";
 
-  // reference box: the body for a lone part, the selection's own bounds otherwise
+  // reference box: the screen body for a lone screen part, the selection's own
+  // bounds otherwise — a canvas-level part has no screen body to line up with
   let bb: Rect;
-  if (moving.length === 1 && !distributing) {
+  if (moving.length === 1 && !distributing && !onCanvas) {
     bb = bodyRect(doc, screenId, ids);
   } else {
     bb = [...rects.values()].reduce((a, r) => ({
@@ -102,7 +104,7 @@ export function alignParts(
     return out;
   }
 
-  // parts on the same screen that are not moving, so an aligned part never lands on one
+  // parts in the same space that are not moving, so an aligned part never lands on one
   const others = doc.parts.filter((p) => p.screen === screenId && !ids.has(p.id)).map(rectOf);
   // step away from the aligned edge: right of a left edge, up from a bottom edge;
   // a centre without a clear spot tries both ways

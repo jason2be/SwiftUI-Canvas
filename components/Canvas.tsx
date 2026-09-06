@@ -58,7 +58,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
   const [guideScreen, setGuideScreen] = useState<string | null>(null);
   const drag = useRef<
     | { mode: "pan"; sx: number; sy: number; vx: number; vy: number }
-    | { mode: "part"; ids: string[]; sx: number; sy: number; origins: Map<string, { x: number; y: number }> }
+    | { mode: "part"; ids: string[]; sx: number; sy: number; space: { id: string } | { id: null }; origins: Map<string, { x: number; y: number }> }
     | { mode: "screen"; id: string; sx: number; sy: number; ox: number; oy: number }
     | null
   >(null);
@@ -147,7 +147,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       const p = doc.parts.find((pp) => pp.id === id);
       if (p) origins.set(id, { x: p.x, y: p.y });
     }
-    drag.current = { mode: "part", ids, sx: e.clientX, sy: e.clientY, origins };
+    drag.current = { mode: "part", ids, space: { id: part.screen }, sx: e.clientX, sy: e.clientY, origins };
   };
 
   const onScreenDown = (e: React.PointerEvent, screen: Screen) => {
@@ -205,23 +205,27 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
           }
         }
       }
-      if (lines.length) {
-        setGuides(lines);
-        setGuideScreen(primary.screen);
-      } else if (guideScreen) {
-        clearGuides();
-      }
-
       // apply the magnetic correction relative to each part's gridded base,
       // so the primary part lands exactly on nx/ny and guides coincide with
       // the rendered position (grid() alone would swallow the correction)
       const corrX = nx - grid(o.x + dx);
       const corrY = ny - grid(o.y + dy);
+      const free = primary.screen === null;
+      if (lines.length) {
+        setGuides(lines);
+        setGuideScreen(free ? "__canvas" : primary.screen);
+      } else if (guideScreen) {
+        clearGuides();
+      }
       mutate((doc0) => {
         const parts = doc0.parts.map((p) => {
           if (!d.ids.includes(p.id)) return p;
           const po = d.origins.get(p.id)!;
           const pw = p.w ?? partSize(p.kind).w;
+          if (p.screen === null) {
+            // canvas-level: free placement, no screen bounds
+            return { ...p, x: grid(po.x + dx) + corrX, y: grid(po.y + dy) + corrY };
+          }
           return {
             ...p,
             x: clamp(grid(po.x + dx) + corrX, 0, Math.max(0, SCREEN_W - pw)),
@@ -240,9 +244,44 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     }
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e?: React.PointerEvent) => {
+    const d = drag.current;
     drag.current = null;
     clearGuides();
+    if (!d || d.mode !== "part" || !e) return;
+    const primary = doc.parts.find((p) => p.id === d.ids[0]);
+    if (!primary) return;
+    // where the pointer lands decides what the parts belong to now
+    if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) <= 2) return; // a click, not a move
+    const pt = toDoc(e.clientX, e.clientY);
+    const target = hitScreen(doc, pt.x, pt.y);
+    if (primary.screen === null && target) {
+      // canvas part dropped on a screen: becomes that screen's part
+      mutate((doc0) => ({
+        ...doc0,
+        parts: doc0.parts.map((p) => {
+          if (!d.ids.includes(p.id) || p.screen !== null) return p;
+          const w = p.w ?? partSize(p.kind, p).w;
+          const h = p.h ?? partSize(p.kind, p).h;
+          return {
+            ...p,
+            screen: target.id,
+            x: clamp(p.x - target.x, 0, Math.max(0, SCREEN_W - w)),
+            y: clamp(p.y - target.y, 0, Math.max(0, SCREEN_H - h)),
+          };
+        }),
+      }));
+    } else if (primary.screen !== null && !target) {
+      // screen part dropped on the workspace: becomes a canvas-level part
+      const from = doc.screens.find((s) => s.id === primary.screen);
+      if (!from) return;
+      mutate((doc0) => ({
+        ...doc0,
+        parts: doc0.parts.map((p) =>
+          d.ids.includes(p.id) && p.screen !== null ? { ...p, screen: null, x: from.x + p.x, y: from.y + p.y } : p,
+        ),
+      }));
+    }
   };
 
   // palette drop
@@ -251,8 +290,21 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     const kind = e.dataTransfer.getData("application/x-sc-kind") as Kind;
     if (!kind) return;
     const pt = toDoc(e.clientX, e.clientY);
-    const target = hitScreen(doc, pt.x, pt.y) ?? doc.screens[0];
-    if (!target) return;
+    const target = hitScreen(doc, pt.x, pt.y);
+    if (!target) {
+      // the workspace itself: a canvas-level part, world coordinates, kept out of the prompt
+      const size = partSize(kind);
+      const part = defaultPart(
+        lang,
+        null,
+        kind,
+        Math.round((pt.x - size.w / 2) / 8) * 8,
+        Math.round((pt.y - size.h / 2) / 8) * 8,
+      );
+      mutate((doc0) => ({ ...doc0, parts: [...doc0.parts, part] }));
+      setSel([part.id]);
+      return;
+    }
     const size = partSize(kind);
     const localX = pt.x - target.x;
     const localY = pt.y - target.y;
@@ -339,7 +391,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       onPointerDown={onBackgroundDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={() => onPointerUp()}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
       onDoubleClick={(e) => {
@@ -419,6 +471,35 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
             </div>
           );
         })}
+
+        {/* canvas-level parts: on the workspace itself, kept out of the prompt */}
+        {doc.parts.filter((p) => p.screen === null).map((p) => (
+          <div
+            key={p.id}
+            className={`part-wrap canvas-part${sel.includes(p.id) ? " selected" : ""}`}
+            style={{ left: p.x, top: p.y, width: p.w ?? defaultW(p) }}
+            onPointerDown={(e) => onPartDown(e, p)}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              if (p.kind === "iconButton" || p.kind === "navBar") onOpenIcon(p.id, p.kind === "navBar" ? "icon2" : "icon");
+            }}
+          >
+            <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} lang={lang} />
+          </div>
+        ))}
+
+        {/* world-level alignment guides for a canvas-level drag */}
+        {guides.map((g, i) => (
+          <div
+            key={i}
+            className={`align-guide${g.equal ? " equal" : ""}${guideScreen === "__canvas" ? "" : " hidden"}`}
+            style={
+              g.axis === "x"
+                ? { left: g.at - 1, top: g.from, width: 2, height: Math.max(0, g.to - g.from) }
+                : { left: g.from, top: g.at - 1, width: Math.max(0, g.to - g.from), height: 2 }
+            }
+          />
+        ))}
 
         {/* link arrows */}
         <svg className="canvas-arrows" width={1} height={1} style={{ overflow: "visible", position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
