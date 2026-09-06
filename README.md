@@ -72,6 +72,7 @@ Read [public/agent.md](public/agent.md): it specifies the JSON document format a
 ## Credits
 
 - Sister project and source of the idea: [m3e-canvas](https://github.com/lnkiai/m3e-canvas) by lnkiai (MIT) — sketch Material 3 Expressive screens for the Android/web side.
+- Canvas icons are [Lucide](https://lucide.dev) lookalikes (ISC); prompts and generated apps always use Apple's [SF Symbols](https://developer.apple.com/sf-symbols/) names, which cannot be embedded in a web project by license.
 - Icons in prompts are [SF Symbols](https://developer.apple.com/sf-symbols/) names owned by Apple Inc.
 
 ## License
@@ -132,6 +133,11 @@ npm test
 ### 来自 AI 代理的草图
 
 参见 [public/agent.md](public/agent.md)：其中规定了 JSON 文档格式以及把它变成分享链接的方法，代理可以据此画出设计并回传链接。
+
+### 致谢
+
+- 姐妹项目与创意来源：[m3e-canvas](https://github.com/lnkiai/m3e-canvas)（MIT）——Android/Web 那一侧的 Material 3 Expressive 画板。
+- 画布图标使用 [Lucide](https://lucide.dev) 的形近替代（ISC 许可）；提示词与生成的应用始终使用 Apple 的 [SF Symbols](https://developer.apple.com/sf-symbols/) 名称——按 Apple 许可，SF Symbols 字形本身不能嵌入网页项目。
 
 ### 许可证
 

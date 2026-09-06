@@ -1,5 +1,6 @@
-/* A curated set of SF Symbols. The canvas preview draws an approximation
- * glyph per name; prompts and generated apps always use the exact name. */
+/* A curated set of SF Symbols. components/Icon.tsx draws each name as a
+ * Lucide lookalike (see lib/iconMap.ts); the glyph here is the fallback for
+ * names without a mapping. Prompts always use the exact name. */
 
 export interface SymbolDef {
   name: string;

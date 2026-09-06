@@ -1,0 +1,10 @@
+SwiftUI Canvas
+
+Canvas-rendered interface icons come from Lucide (https://lucide.dev),
+licensed under the ISC License. Copyright (c) Lucide Contributors.
+They are lookalikes drawn on the canvas only.
+
+Prompts, share documents and generated apps always reference Apple's
+SF Symbols (https://developer.apple.com/sf-symbols/) by their exact
+names. SF Symbols glyphs themselves are licensed by Apple Inc. for use
+on Apple platforms and are not embedded in this project.

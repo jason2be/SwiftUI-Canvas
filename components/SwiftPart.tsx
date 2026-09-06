@@ -3,10 +3,11 @@
 import React from "react";
 import type { Palette } from "@/lib/theme";
 import type { Part } from "@/lib/tokens";
-import { glyphFor } from "@/lib/symbols";
+import Icon from "./Icon";
 
 /* Draws one part with iOS visuals. Coordinates come from the canvas wrapper:
- * each part renders absolutely at its x/y with its w/h. */
+ * each part renders absolutely at its x/y with its w/h. SF Symbol names render
+ * through components/Icon.tsx (Lucide lookalikes, exact names preserved). */
 
 interface Props {
   part: Part;
@@ -16,15 +17,6 @@ interface Props {
 }
 
 const radius = (capsule: boolean, h: number) => (capsule ? h / 2 : 12);
-
-function Glyph({ name, size, color }: { name?: string | null; size: number; color: string }) {
-  if (!name) return null;
-  return (
-    <span style={{ fontSize: size, color, lineHeight: 1, display: "inline-flex", alignItems: "center" }} aria-hidden>
-      {glyphFor(name)}
-    </span>
-  );
-}
 
 export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props) {
   const fontStack = "-apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif";
@@ -67,7 +59,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
             ...styles[p.variant],
           }}
         >
-          {p.icon ? <Glyph name={p.icon} size={17} color={styles[p.variant].color as string} /> : null}
+          {p.icon ? <Icon name={p.icon} size={17} color={styles[p.variant].color as string} /> : null}
           {p.label}
         </div>
       );
@@ -92,7 +84,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
             boxShadow: glass ? "0 1px 4px rgba(0,0,0,0.12)" : undefined,
           }}
         >
-          <Glyph name={p.icon} size={18} color={prominent ? c.accentText : c.accent} />
+          <Icon name={p.icon} size={18} color={prominent ? c.accentText : c.accent} />
         </div>
       );
     }
@@ -186,7 +178,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
                 color: c.label,
               }}
             >
-              {o.icon ? <Glyph name={o.icon} size={13} color={c.label} /> : null}
+              {o.icon ? <Icon name={o.icon} size={13} color={c.label} /> : null}
               {o.label}
             </div>
           ))}
@@ -212,7 +204,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
           <span style={{ fontSize: 17, color: c.label }}>{p.label}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 17, color: c.secondaryLabel }}>{(p.options ?? [])[p.selected ?? 0]?.label ?? ""}</span>
-            <Glyph name="chevron.up.chevron.down" size={12} color={c.secondaryLabel} />
+            <Icon name="chevron.up.chevron.down" size={12} color={c.secondaryLabel} />
           </span>
         </div>
       );
@@ -234,7 +226,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
               fontSize: 17,
             }}
           >
-            {p.icon ? <Glyph name={p.icon} size={16} color={c.secondaryLabel} /> : null}
+            {p.icon ? <Icon name={p.icon} size={16} color={c.secondaryLabel} /> : null}
             {p.supporting || ""}
           </div>
         </div>
@@ -257,7 +249,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
             fontFamily: fontStack,
           }}
         >
-          <Glyph name="magnifyingglass" size={15} color={c.secondaryLabel} />
+          <Icon name="magnifyingglass" size={15} color={c.secondaryLabel} />
           {p.label || "Search"}
         </div>
       );
@@ -280,7 +272,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
           <div style={{ position: "absolute", left: 8, top: large ? 50 : 12, display: "flex", alignItems: "center", gap: 2, color: c.accent }}>
             {p.icon ? (
               <>
-                <Glyph name={p.icon} size={20} color={c.accent} />
+                <Icon name={p.icon} size={20} color={c.accent} />
                 <span style={{ fontSize: 17 }}>Back</span>
               </>
             ) : null}
@@ -291,7 +283,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
             <div style={{ position: "absolute", left: 0, right: 0, top: 14, textAlign: "center", fontSize: 17, fontWeight: 600 }}>{p.label}</div>
           )}
           <div style={{ position: "absolute", right: 12, top: large ? 52 : 13 }}>
-            <Glyph name={p.icon2} size={20} color={c.accent} />
+            <Icon name={p.icon2} size={20} color={c.accent} />
           </div>
         </div>
       );
@@ -316,7 +308,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
           <div style={{ flex: 1, display: "flex" }}>
             {opts.map((o, i) => (
               <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, color: i === sel ? c.accent : c.secondaryLabel }}>
-                <Glyph name={o.icon} size={22} color={i === sel ? c.accent : c.secondaryLabel} />
+                <Icon name={o.icon} size={22} color={i === sel ? c.accent : c.secondaryLabel} />
                 <span style={{ fontSize: 10 }}>{o.label}</span>
               </div>
             ))}
@@ -356,9 +348,9 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
                 paddingLeft: inset && i > 0 && o.icon ? 0 : 16,
               }}
             >
-              {o.icon ? <Glyph name={o.icon} size={20} color={c.accent} /> : null}
+              {o.icon ? <Icon name={o.icon} size={20} color={c.accent} /> : null}
               <span style={{ fontSize: 17, color: c.label, flex: 1 }}>{o.label}</span>
-              <Glyph name="chevron.right" size={14} color={c.secondaryLabel} />
+              <Icon name="chevron.right" size={14} color={c.secondaryLabel} />
             </div>
           ))}
         </div>
@@ -383,7 +375,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
             gap: 6,
           }}
         >
-          {p.icon ? <Glyph name={p.icon} size={26} color={c.accent} /> : null}
+          {p.icon ? <Icon name={p.icon} size={26} color={c.accent} /> : null}
           <div style={{ fontSize: 17, fontWeight: 600, color: c.label }}>{p.label}</div>
           {p.supporting ? <div style={{ fontSize: 13, color: c.secondaryLabel, lineHeight: 1.35 }}>{p.supporting}</div> : null}
         </div>
@@ -543,7 +535,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
             fontFamily: fontStack,
           }}
         >
-          <Glyph name={p.icon ?? "photo"} size={40} color={c.secondaryLabel} />
+          <Icon name={p.icon ?? "photo"} size={40} color={c.secondaryLabel} />
           <span style={{ fontSize: 11 }}>{p.w ?? 200}×{p.h ?? 200}</span>
         </div>
       );

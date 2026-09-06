@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { searchSymbols, SYMBOLS } from "@/lib/symbols";
+import Icon from "./Icon";
 
 /* SF Symbols picker: search + grid. Picking writes the exact symbol name;
  * the canvas shows an approximation glyph. */
@@ -53,7 +54,7 @@ export default function IconPicker({ initial, onPick, onClose }: Props) {
               title={s.name}
               onClick={() => onPick(s.name)}
             >
-              <span className="icon-cell-glyph">{s.glyph}</span>
+              <span className="icon-cell-glyph"><Icon name={s.name} size={20} /></span>
               <span className="icon-cell-name">{s.name}</span>
             </button>
           ))}

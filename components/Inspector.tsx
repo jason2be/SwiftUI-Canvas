@@ -11,7 +11,7 @@ import {
   type Part,
   type Transition,
 } from "@/lib/tokens";
-import { glyphFor } from "@/lib/symbols";
+import Icon from "./Icon";
 import type { Editor } from "@/lib/store";
 
 /* Right panel: inspector for the selection (or the active screen), plus a
@@ -51,7 +51,7 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
           {activeScreen && parts.length > 0 ? (
             [...parts].reverse().map((p) => (
               <div key={p.id} className={`layer-row${sel.includes(p.id) ? " on" : ""}`} onClick={() => setSel([p.id])}>
-                <span className="layer-glyph">{p.icon ? glyphFor(p.icon) : p.kind === "text" ? "T" : "▢"}</span>
+                <span className="layer-glyph">{p.icon ? <Icon name={p.icon} size={13} /> : p.kind === "text" ? "T" : "▢"}</span>
                 <span className="layer-name">{p.label || p.supporting || KIND_TEXT[lang][p.kind]}</span>
                 <span className="layer-kind">{KIND_TEXT[lang][p.kind]}</span>
                 <span className="layer-btns">
@@ -120,7 +120,7 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
           {(["iconButton", "card", "textField", "image"] as const).includes(part.kind as never) && (
             <Field label={t("field.icon")}>
               <button className="icon-btn" onClick={() => onOpenIcon(part.id, "icon")}>
-                {part.icon ? glyphFor(part.icon) : "—"} <span className="icon-name">{part.icon ?? ""}</span>
+                {part.icon ? <Icon name={part.icon} size={15} /> : "—"} <span className="icon-name">{part.icon ?? ""}</span>
               </button>
             </Field>
           )}
@@ -129,12 +129,12 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
             <>
               <Field label={t("field.icon")}>
                 <button className="icon-btn" onClick={() => onOpenIcon(part.id, "icon")}>
-                  {part.icon ? glyphFor(part.icon) : "—"} <span className="icon-name">{part.icon ?? ""}</span>
+                  {part.icon ? <Icon name={part.icon} size={15} /> : "—"} <span className="icon-name">{part.icon ?? ""}</span>
                 </button>
               </Field>
               <Field label={t("field.trailingIcon")}>
                 <button className="icon-btn" onClick={() => onOpenIcon(part.id, "icon2")}>
-                  {part.icon2 ? glyphFor(part.icon2) : "—"} <span className="icon-name">{part.icon2 ?? ""}</span>
+                  {part.icon2 ? <Icon name={part.icon2} size={15} /> : "—"} <span className="icon-name">{part.icon2 ?? ""}</span>
                 </button>
               </Field>
             </>
@@ -201,7 +201,7 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                     }}
                   />
                   <button className="icon-btn sm" onClick={() => onOpenIcon(part.id, `opt:${i}`)}>
-                    {o.icon ? glyphFor(o.icon) : "—"}
+                    {o.icon ? <Icon name={o.icon} size={14} /> : "—"}
                   </button>
                   {part.kind === "tabBar" && (
                     <select

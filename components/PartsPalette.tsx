@@ -3,7 +3,7 @@
 import React from "react";
 import { getT, KIND_TEXT } from "@/lib/i18n";
 import { PALETTE_ORDER, type Kind } from "@/lib/tokens";
-import { glyphFor } from "@/lib/symbols";
+import Icon from "./Icon";
 import type { Editor } from "@/lib/store";
 
 /* Left panel: the parts palette, grouped, draggable onto the canvas. */
@@ -32,7 +32,7 @@ function KindGlyph({ kind }: { kind: Kind }) {
     case "button":
       return <div style={{ ...box, borderRadius: 15, border: "1.5px solid var(--accent, #5AC8FA)", color: "var(--accent, #5AC8FA)", fontSize: 12, fontWeight: 600 }}>Aa</div>;
     case "iconButton":
-      return <div style={{ ...box, borderRadius: 15, background: "var(--accent, #5AC8FA)", color: "#fff" }}>{glyphFor("plus")}</div>;
+      return <div style={{ ...box, borderRadius: 15, background: "var(--accent, #5AC8FA)", color: "#fff" }}><Icon name="plus" size={14} /></div>;
     case "toggle":
       return <div style={{ ...box, background: "transparent" }}><div style={{ width: 34, height: 20, borderRadius: 10, background: "#34C759", position: "relative" }}><div style={{ position: "absolute", right: 2, top: 2, width: 16, height: 16, borderRadius: 8, background: "#fff" }} /></div></div>;
     case "slider":
@@ -40,11 +40,11 @@ function KindGlyph({ kind }: { kind: Kind }) {
     case "segmented":
       return <div style={{ ...box, gap: 2 }}><span style={{ width: 10, height: 14, borderRadius: 3, background: "var(--panel-3)" }} /><span style={{ width: 10, height: 14, borderRadius: 3, background: "var(--accent, #5AC8FA)" }} /><span style={{ width: 10, height: 14, borderRadius: 3, background: "var(--panel-3)" }} /></div>;
     case "picker":
-      return <div style={{ ...box, color: "var(--text-2)", fontSize: 12 }}>{glyphFor("chevron.up.chevron.down")}</div>;
+      return <div style={{ ...box, color: "var(--text-2)" }}><Icon name="chevron.up.chevron.down" size={12} /></div>;
     case "textField":
       return <div style={{ ...box, background: "transparent" }}><div style={{ width: 34, height: 18, borderRadius: 5, border: "1px solid var(--panel-3)", display: "flex", alignItems: "center", paddingLeft: 4, color: "var(--text-2)", fontSize: 10 }}>|</div></div>;
     case "searchField":
-      return <div style={{ ...box, borderRadius: 15, color: "var(--text-2)" }}>{glyphFor("magnifyingglass")}</div>;
+      return <div style={{ ...box, borderRadius: 15, color: "var(--text-2)" }}><Icon name="magnifyingglass" size={13} /></div>;
     case "navBar":
       return <div style={{ ...box, background: "var(--panel-3)", color: "var(--text-1)", fontSize: 11, fontWeight: 600 }}>Aa</div>;
     case "tabBar":
@@ -64,7 +64,7 @@ function KindGlyph({ kind }: { kind: Kind }) {
     case "text":
       return <div style={{ ...box, background: "transparent", fontSize: 15, fontWeight: 700, color: "var(--text-1)" }}>T</div>;
     case "image":
-      return <div style={{ ...box, color: "var(--text-2)" }}>{glyphFor("photo")}</div>;
+      return <div style={{ ...box, color: "var(--text-2)" }}><Icon name="photo" size={15} /></div>;
     case "divider":
       return <div style={{ ...box, background: "transparent" }}><div style={{ width: 34, height: 1, background: "var(--panel-3)" }} /></div>;
     case "box":
