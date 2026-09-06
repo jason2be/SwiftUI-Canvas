@@ -136,6 +136,8 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
   const onPartDown = (e: React.PointerEvent, part: Part) => {
     if (tool === "hand" || space) return; // let pan take it
     e.stopPropagation();
+    // the part's screen is the active context, so its panel is one Esc away
+    if (part.screen !== null) setActiveScreen(part.screen);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     if (e.shiftKey) {
       setSel(sel.includes(part.id) ? sel.filter((s) => s !== part.id) : [...sel, part.id]);
@@ -418,10 +420,14 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
           const isActive = activeScreen === screen.id;
           return (
             <div key={screen.id} className="screen-wrap" style={{ left: screen.x, top: screen.y }}>
-              <div className="screen-label" onPointerDown={(e) => e.stopPropagation()}>
+              <div className={`screen-label${isActive ? " active" : ""}`} onPointerDown={(e) => e.stopPropagation()}>
                 <span
                   className="screen-name"
                   title={t("action.rename")}
+                  onClick={() => {
+                    setActiveScreen(screen.id);
+                    setSel([]);
+                  }}
                   onDoubleClick={() => {
                     const name = prompt(t("action.rename"), screen.name);
                     if (name && name.trim()) mutate((d) => ({ ...d, screens: d.screens.map((s) => (s.id === screen.id ? { ...s, name: name.trim() } : s)) }));
