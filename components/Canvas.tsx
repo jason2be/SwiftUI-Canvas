@@ -17,8 +17,16 @@ import {
   type Screen,
 } from "@/lib/tokens";
 import SwiftPart from "./SwiftPart";
+import Icon from "./Icon";
 import type { IconField } from "./Inspector";
 import type { Editor } from "@/lib/store";
+import {
+  computeSnap,
+  guidesBetween,
+  snapTargetsFor,
+  type GuideLine,
+} from "@/lib/snapping";
+import { partSize, MARGIN } from "@/lib/tokens";
 
 /* The infinite canvas: screens laid out in document space, pan/zoom in view
  * space, drag & drop from the palette, drag to move parts, link arrows. */
@@ -46,12 +54,25 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
   const viewRef = useRef(view);
   viewRef.current = view;
   const [space, setSpace] = useState(false);
+  const [guides, setGuides] = useState<(GuideLine & { equal?: boolean })[]>([]);
+  const [guideScreen, setGuideScreen] = useState<string | null>(null);
   const drag = useRef<
     | { mode: "pan"; sx: number; sy: number; vx: number; vy: number }
     | { mode: "part"; ids: string[]; sx: number; sy: number; origins: Map<string, { x: number; y: number }> }
     | { mode: "screen"; id: string; sx: number; sy: number; ox: number; oy: number }
     | null
   >(null);
+
+  const clearGuides = () => {
+    setGuides([]);
+    setGuideScreen(null);
+  };
+
+  const flashGuides = (lines: (GuideLine & { equal?: boolean })[], screenId: string) => {
+    setGuides(lines);
+    setGuideScreen(screenId);
+    setTimeout(clearGuides, 700);
+  };
 
   // non-passive wheel: pan, ctrl+wheel zoom
   useEffect(() => {
@@ -148,13 +169,63 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     } else if (d.mode === "part") {
       const dx = (e.clientX - d.sx) / view.z;
       const dy = (e.clientY - d.sy) / view.z;
-      const snap = e.altKey ? (v: number) => v : (v: number) => Math.round(v / 8) * 8;
+      const primary = doc.parts.find((p) => p.id === d.ids[0]);
+      if (!primary) return;
+      const w = primary.w ?? partSize(primary.kind).w;
+      const h = primary.h ?? partSize(primary.kind).h;
+      const o = d.origins.get(d.ids[0])!;
+
+      // base position: free with Alt, else on the 8pt grid
+      const grid = e.altKey ? (v: number) => v : (v: number) => Math.round(v / 8) * 8;
+      let nx = grid(o.x + dx);
+      let ny = grid(o.y + dy);
+
+      // magnetic alignment: edges/centers vs peers, margins, center, bars
+      const lines: (GuideLine & { equal?: boolean })[] = [];
+      if (!e.altKey) {
+        const targets = snapTargetsFor({
+          screen: { id: primary.screen },
+          doc,
+          width: (p) => p.w ?? partSize(p.kind).w,
+          height: (p) => p.h ?? partSize(p.kind).h,
+        });
+        const peers = targets.peers.filter((p) => !d.ids.includes(p.id ?? ""));
+        const res = computeSnap({ x: nx, y: ny, w, h }, { ...targets, peers });
+        nx += res.dx;
+        ny += res.dy;
+        if (res.guide) {
+          lines.push(...guidesBetween({ x: nx, y: ny, w, h }, res.guide, peers, { x: 0, y: 0 }));
+          if (res.equal) {
+            lines.push({
+              axis: res.equal.axis,
+              at: res.equal.at,
+              from: res.equal.axis === "x" ? ny : nx,
+              to: res.equal.axis === "x" ? ny + h : nx + w,
+              equal: true,
+            });
+          }
+        }
+      }
+      if (lines.length) {
+        setGuides(lines);
+        setGuideScreen(primary.screen);
+      } else if (guideScreen) {
+        clearGuides();
+      }
+
+      // apply the same magnetic correction to every selected part
+      const corrX = nx - (o.x + dx);
+      const corrY = ny - (o.y + dy);
       mutate((doc0) => {
         const parts = doc0.parts.map((p) => {
-          const o = d.origins.get(p.id);
-          if (!o) return p;
-          const w = p.w ?? defaultW(p);
-          return { ...p, x: clamp(snap(o.x + dx), 0, Math.max(0, SCREEN_W - w)), y: clamp(snap(o.y + dy), 0, Math.max(0, SCREEN_H - 40)) };
+          if (!d.ids.includes(p.id)) return p;
+          const po = d.origins.get(p.id)!;
+          const pw = p.w ?? partSize(p.kind).w;
+          return {
+            ...p,
+            x: clamp(grid(po.x + dx) + corrX, 0, Math.max(0, SCREEN_W - pw)),
+            y: clamp(grid(po.y + dy) + corrY, 0, Math.max(0, SCREEN_H - 40)),
+          };
         });
         return { ...doc0, parts };
       }, `drag:${d.ids[0]}`);
@@ -170,6 +241,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
 
   const onPointerUp = () => {
     drag.current = null;
+    clearGuides();
   };
 
   // palette drop
@@ -180,14 +252,44 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     const pt = toDoc(e.clientX, e.clientY);
     const target = hitScreen(doc, pt.x, pt.y) ?? doc.screens[0];
     if (!target) return;
-    const w = defaultW({ kind } as Part);
-    const x = clamp(Math.round((pt.x - target.x - w / 2) / 4) * 4, 0, SCREEN_W - w);
-    const y = clamp(Math.round((pt.y - target.y - 24) / 4) * 4, 0, SCREEN_H - 100);
-    mutate((doc0) => {
-      const p = defaultPart(lang, target.id, kind, x, y);
-      return { ...doc0, parts: [...doc0.parts, p] };
-    });
+    const size = partSize(kind);
+    const localX = pt.x - target.x;
+    const localY = pt.y - target.y;
+
+    // classic-position snapping on drop: near margins / h-center / content top
+    const near = (v: number, t: number, r = 12) => Math.abs(v - t) <= r;
+    const xs = [MARGIN, SCREEN_W - MARGIN - size.w, Math.round((SCREEN_W - size.w) / 2)];
+    const ys = [MARGIN, 150];
+    let x = clamp(localX - size.w / 2, 0, SCREEN_W - size.w);
+    let y = clamp(localY - size.h / 2, 0, SCREEN_H - size.h);
+    let axis: "x" | "y" | null = null;
+    for (const cx of xs) {
+      if (near(x, cx, 14)) {
+        x = cx;
+        axis = "x";
+        break;
+      }
+    }
+    for (const cy of ys) {
+      if (near(y, cy, 14)) {
+        y = cy;
+        axis = axis ? axis : "y";
+        break;
+      }
+    }
+
+    const part = defaultPart(lang, target.id, kind, x, y);
+    mutate((doc0) => ({ ...doc0, parts: [...doc0.parts, part] }));
     setActiveScreen(target.id);
+
+    // flash a guide showing what snapped
+    const line: GuideLine & { equal?: boolean } =
+      axis === "x"
+        ? { axis: "x", at: x, from: y, to: y + size.h }
+        : axis === "y"
+          ? { axis: "y", at: y, from: x, to: x + size.w }
+          : { axis: "x", at: x, from: y, to: y + size.h };
+    if (axis) flashGuides([line], target.id);
   };
 
   // fit view to content
@@ -299,6 +401,18 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
                     <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} />
                     {p.link ? <span className="part-link-badge">→</span> : null}
                   </div>
+                ))}
+                {/* alignment guides for the active drag, drawn in screen space */}
+                {guides.map((g, i) => (
+                  <div
+                    key={i}
+                    className={`align-guide${g.equal ? " equal" : ""}${guideScreen === screen.id ? "" : " hidden"}`}
+                    style={
+                      g.axis === "x"
+                        ? { left: g.at - 1, top: g.from, width: 2, height: Math.max(0, g.to - g.from) }
+                        : { left: g.from, top: g.at - 1, width: Math.max(0, g.to - g.from), height: 2 }
+                    }
+                  />
                 ))}
               </div>
             </div>

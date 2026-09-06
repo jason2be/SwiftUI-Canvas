@@ -358,6 +358,27 @@ body {
   pointer-events: none;
 }
 
+/* alignment guides (drawn inside a screen frame, screen coordinates) */
+
+.align-guide {
+  position: absolute;
+  z-index: 60;
+  background: var(--accent);
+  border-radius: 1px;
+  pointer-events: none;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.55);
+}
+
+.align-guide.equal {
+  background: #30b0c7;
+  box-shadow: none;
+  opacity: 0.9;
+}
+
+.align-guide.hidden {
+  display: none;
+}
+
 .canvas-hud {
   position: absolute;
   right: 14px;
