@@ -558,6 +558,16 @@ body {
   border-color: var(--accent);
 }
 
+/* The canvas is a drawing surface, not a document: dragging a part must not
+ * start a text selection inside it. Labels are edited in the Inspector.
+ * The preview is read-only too; rename uses window.prompt, so nothing here
+ * needs native selection. */
+.canvas-host,
+.preview-overlay {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .align-sec {
   display: flex;
   flex-direction: column;
