@@ -26,7 +26,7 @@ interface Props {
   onOpenIcon: (partId: string, field: IconField) => void;
 }
 
-const LINKABLE: Part["kind"][] = ["button", "iconButton", "card", "text", "image", "gauge", "box"];
+const LINKABLE: Part["kind"][] = ["button", "iconButton", "card", "text", "image", "gauge", "box", "menu", "datePicker", "disclosure", "labeledContent"];
 
 export default function Inspector({ editor, onOpenIcon }: Props) {
   const { doc, lang, sel, setSel, activeScreen, mutate } = editor;
@@ -112,8 +112,8 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
             </Field>
           )}
 
-          {["card", "alert", "sheet", "textField"].includes(part.kind) && (
-            <Field label={part.kind === "textField" ? t("field.placeholder") : t("field.supporting")}>
+          {["card", "alert", "sheet", "textField", "secureField", "textEditor", "datePicker", "labeledContent", "contentUnavailable"].includes(part.kind) && (
+            <Field label={part.kind === "textField" || part.kind === "secureField" || part.kind === "textEditor" ? t("field.placeholder") : t("field.supporting")}>
               <input value={part.supporting ?? ""} onChange={(e) => patch(part.id, { supporting: e.target.value }, `sup:${part.id}`)} />
             </Field>
           )}
@@ -159,14 +159,20 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
             </Field>
           )}
 
-          {["slider", "progress", "gauge"].includes(part.kind) && (
+          {part.kind === "disclosure" && (
+            <Field label={lang === "zh" ? "展开" : "Expanded"}>
+              <button className={`switch${part.checked ? " on" : ""}`} onClick={() => patch(part.id, { checked: !part.checked })} role="switch" aria-checked={!!part.checked} />
+            </Field>
+          )}
+
+          {["slider", "progress", "gauge", "stepper"].includes(part.kind) && (
             <Field label={t("field.value")}>
               <input
                 type="number"
                 min={0}
-                max={100}
-                value={part.value ?? 40}
-                onChange={(e) => patch(part.id, { value: clampN(e.target.value, 0, 100) }, `val:${part.id}`)}
+                max={part.kind === "stepper" ? 999 : 100}
+                value={part.value ?? (part.kind === "stepper" ? 1 : 40)}
+                onChange={(e) => patch(part.id, { value: clampN(e.target.value, 0, part.kind === "stepper" ? 999 : 100) }, `val:${part.id}`)}
               />
             </Field>
           )}
@@ -179,7 +185,7 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
             </Field>
           )}
 
-          {["segmented", "picker", "tabBar"].includes(part.kind) && (part.options?.length ?? 0) > 0 && (
+          {["segmented", "picker", "tabBar", "menu"].includes(part.kind) && (part.options?.length ?? 0) > 0 && (
             <Field label={t("field.selected")}>
               <select value={part.selected ?? 0} onChange={(e) => patch(part.id, { selected: Number(e.target.value) })}>
                 {part.options?.map((o, i) => (
@@ -189,7 +195,7 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
             </Field>
           )}
 
-          {["segmented", "picker", "tabBar", "list", "alert"].includes(part.kind) && (
+          {["segmented", "picker", "tabBar", "list", "alert", "menu", "disclosure"].includes(part.kind) && (
             <div className="options">
               <div className="field-label">{t("field.options")}</div>
               {part.options?.map((o, i) => (

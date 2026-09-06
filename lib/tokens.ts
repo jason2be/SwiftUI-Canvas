@@ -31,7 +31,11 @@ export type Variant =
   | "caption"
   | "background"
   | "secondary"
-  | "tertiary";
+  | "tertiary"
+  | "compact"
+  | "graphical"
+  | "bar"
+  | "line";
 
 export type Transition = "push" | "zoom" | "sheet" | "cover" | "none";
 
@@ -57,7 +61,19 @@ export type Kind =
   | "text"
   | "image"
   | "divider"
-  | "box";
+  | "box"
+  | "menu"
+  | "stepper"
+  | "datePicker"
+  | "secureField"
+  | "textEditor"
+  | "shareLink"
+  | "link"
+  | "contentUnavailable"
+  | "disclosure"
+  | "labeledContent"
+  | "map"
+  | "chart";
 
 export const KIND_ORDER: Kind[] = [
   "button",
@@ -80,6 +96,18 @@ export const KIND_ORDER: Kind[] = [
   "image",
   "divider",
   "box",
+  "menu",
+  "stepper",
+  "datePicker",
+  "secureField",
+  "textEditor",
+  "shareLink",
+  "link",
+  "contentUnavailable",
+  "disclosure",
+  "labeledContent",
+  "map",
+  "chart",
 ];
 
 /** which kinds the parts palette shows, in order */
@@ -128,6 +156,18 @@ export const KIND_VARIANTS: Record<Kind, Variant[]> = {
   image: ["plain"],
   divider: ["plain"],
   box: ["background", "secondary", "tertiary"],
+  menu: ["bordered", "borderedProminent", "gray", "plain", "glass"],
+  stepper: ["plain"],
+  datePicker: ["compact", "graphical"],
+  secureField: ["roundedBorder", "plain"],
+  textEditor: ["plain"],
+  shareLink: ["plain"],
+  link: ["plain"],
+  contentUnavailable: ["plain"],
+  disclosure: ["plain"],
+  labeledContent: ["plain"],
+  map: ["plain"],
+  chart: ["bar", "line"],
 };
 
 export interface Option {
@@ -277,7 +317,7 @@ export function partSize(kind: Kind, part?: Partial<Part>): { w: number; h: numb
     case "picker":
       return { w: 361, h: 44 };
     case "textField":
-      return { w: 361, h: 64 };
+      return { w: 361, h: 60 };
     case "searchField":
       return { w: 361, h: 40 };
     case "navBar":
@@ -307,6 +347,31 @@ export function partSize(kind: Kind, part?: Partial<Part>): { w: number; h: numb
       return { w: 361, h: 1 };
     case "box":
       return { w: 361, h: 220 };
+    case "menu":
+      return { w: 160, h: 50 };
+    case "stepper":
+      return { w: 220, h: 36 };
+    case "datePicker":
+      return p?.variant === "graphical" ? { w: 320, h: 320 } : { w: 240, h: 36 };
+    case "secureField":
+      return { w: 361, h: 60 };
+    case "textEditor":
+      return { w: 280, h: 120 };
+    case "shareLink":
+      return { w: 160, h: 50 };
+    case "link":
+      return { w: 120, h: 25 };
+    case "contentUnavailable":
+      return { w: 361, h: 200 };
+    case "disclosure":
+      // collapsed row; expanded adds the 8pt gap, one 44pt row per option and hairlines
+      return { w: 361, h: part?.checked ? 142 + 44 * Math.max(0, (part?.options?.length ?? 2) - 2) : 44 };
+    case "labeledContent":
+      return { w: 361, h: 44 };
+    case "map":
+      return { w: 361, h: 200 };
+    case "chart":
+      return { w: 361, h: 200 };
   }
 }
 
@@ -410,6 +475,46 @@ export function defaultPart(lang: Lang, screenId: string, kind: Kind, x: number,
       return base;
     case "box":
       return { ...base, variant: "background" };
+    case "menu":
+      return {
+        ...base,
+        label: lang === "zh" ? "更多操作" : "More",
+        selected: 0,
+        options: [
+          { label: lang === "zh" ? "复制" : "Duplicate" },
+          { label: lang === "zh" ? "重命名" : "Rename" },
+          { label: lang === "zh" ? "删除" : "Delete" },
+        ],
+      };
+    case "stepper":
+      return { ...base, label: lang === "zh" ? "数量" : "Quantity", value: 1 };
+    case "datePicker":
+      return { ...base, label: lang === "zh" ? "日期" : "Date", supporting: lang === "zh" ? "2026年9月6日" : "Sep 6, 2026" };
+    case "secureField":
+      return { ...base, label: lang === "zh" ? "密码" : "Password", supporting: lang === "zh" ? "请输入密码" : "Required" };
+    case "textEditor":
+      return { ...base, label: lang === "zh" ? "备注" : "Notes", supporting: lang === "zh" ? "写点什么…" : "Start writing…" };
+    case "shareLink":
+      return { ...base, label: lang === "zh" ? "分享" : "Share", icon: "square.and.arrow.up" };
+    case "link":
+      return { ...base, label: lang === "zh" ? "了解更多" : "Learn more" };
+    case "contentUnavailable":
+      return { ...base, label: lang === "zh" ? "没有内容" : "No Content", supporting: lang === "zh" ? "稍后再来看看" : "Please check back later.", icon: "tray" };
+    case "disclosure":
+      return {
+        ...base,
+        label: lang === "zh" ? "详细信息" : "Details",
+        options: [
+          { label: lang === "zh" ? "条目一" : "Detail one" },
+          { label: lang === "zh" ? "条目二" : "Detail two" },
+        ],
+      };
+    case "labeledContent":
+      return { ...base, label: lang === "zh" ? "版本" : "Version", supporting: "1.0" };
+    case "map":
+      return { ...base, label: lang === "zh" ? "地图" : "Map" };
+    case "chart":
+      return { ...base, label: lang === "zh" ? "图表" : "Chart" };
   }
 }
 

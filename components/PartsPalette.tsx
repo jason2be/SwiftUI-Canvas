@@ -9,9 +9,9 @@ import type { Editor } from "@/lib/store";
 /* Left panel: the parts palette, grouped, draggable onto the canvas. */
 
 const GROUPS: { key: string; kinds: Kind[] }[] = [
-  { key: "group.controls", kinds: ["button", "iconButton", "toggle", "slider", "segmented", "picker", "textField", "searchField"] },
+  { key: "group.controls", kinds: ["button", "iconButton", "toggle", "slider", "stepper", "segmented", "picker", "menu", "datePicker", "textField", "secureField", "textEditor", "searchField"] },
   { key: "group.bars", kinds: ["navBar", "tabBar"] },
-  { key: "group.content", kinds: ["list", "card", "text", "image", "divider", "box", "progress", "gauge"] },
+  { key: "group.content", kinds: ["list", "disclosure", "labeledContent", "card", "text", "link", "shareLink", "image", "divider", "box", "progress", "gauge", "chart", "map", "contentUnavailable"] },
   { key: "group.present", kinds: ["alert", "sheet"] },
 ];
 
@@ -69,6 +69,30 @@ function KindGlyph({ kind }: { kind: Kind }) {
       return <div style={{ ...box, background: "transparent" }}><div style={{ width: 34, height: 1, background: "var(--panel-3)" }} /></div>;
     case "box":
       return <div style={{ ...box, background: "transparent", border: "1.5px solid var(--panel-3)" }} />;
+    case "menu":
+      return <div style={{ ...box, borderRadius: 15, border: "1.5px solid var(--accent, #5AC8FA)", color: "var(--accent, #5AC8FA)", fontSize: 11, fontWeight: 600, gap: 2 }}>Aa<Icon name="chevron.up.chevron.down" size={9} /></div>;
+    case "stepper":
+      return <div style={{ ...box, gap: 2, color: "var(--text-2)" }}><span style={{ width: 12, height: 18, borderRadius: 4, background: "var(--panel-3)", display: "grid", placeItems: "center", fontSize: 10 }}>−</span><span style={{ width: 12, height: 18, borderRadius: 4, background: "var(--panel-3)", display: "grid", placeItems: "center", fontSize: 10 }}>+</span></div>;
+    case "datePicker":
+      return <div style={{ ...box, color: "var(--text-2)" }}><Icon name="calendar" size={14} /></div>;
+    case "secureField":
+      return <div style={{ ...box, background: "transparent" }}><div style={{ width: 34, height: 18, borderRadius: 5, border: "1px solid var(--panel-3)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 4px", color: "var(--text-2)", fontSize: 9 }}>••••<Icon name="eye.slash" size={9} /></div></div>;
+    case "textEditor":
+      return <div style={{ ...box, flexDirection: "column", gap: 2, alignItems: "flex-start", padding: "5px 7px", border: "1px solid var(--panel-3)" }}><span style={{ width: 20, height: 3, borderRadius: 2, background: "var(--panel-3)" }} /><span style={{ width: 26, height: 3, borderRadius: 2, background: "var(--panel-3)" }} /><span style={{ width: 14, height: 3, borderRadius: 2, background: "var(--panel-3)" }} /></div>;
+    case "shareLink":
+      return <div style={{ ...box, color: "var(--text-2)" }}><Icon name="square.and.arrow.up" size={15} /></div>;
+    case "link":
+      return <div style={{ ...box, background: "transparent", fontSize: 12, fontWeight: 600, color: "var(--accent, #5AC8FA)", textDecoration: "underline" }}>Aa</div>;
+    case "contentUnavailable":
+      return <div style={{ ...box, flexDirection: "column", color: "var(--text-2)" }}><Icon name="tray" size={15} /></div>;
+    case "disclosure":
+      return <div style={{ ...box, color: "var(--text-2)", justifyContent: "space-between", padding: "0 7px" }}><span style={{ width: 14, height: 4, borderRadius: 2, background: "var(--panel-3)" }} /><Icon name="chevron.down" size={11} /></div>;
+    case "labeledContent":
+      return <div style={{ ...box, justifyContent: "space-between", padding: "0 7px" }}><span style={{ width: 12, height: 4, borderRadius: 2, background: "var(--panel-3)" }} /><span style={{ width: 8, height: 4, borderRadius: 2, background: "var(--accent, #5AC8FA)" }} /></div>;
+    case "map":
+      return <div style={{ ...box, color: "#ff3b30", background: "transparent" }}><Icon name="mappin" size={16} /></div>;
+    case "chart":
+      return <div style={{ ...box, gap: 2, alignItems: "flex-end", background: "transparent" }}>{[8, 14, 10, 17].map((h, i) => <span key={i} style={{ width: 6, height: h, borderRadius: "2px 2px 0 0", background: "var(--accent, #5AC8FA)", opacity: i === 3 ? 1 : 0.5 }} />)}</div>;
   }
 }
 

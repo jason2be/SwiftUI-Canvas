@@ -119,6 +119,9 @@ import {
   WandSparkles,
   ZoomIn,
   ZoomOut,
+  CalendarDays,
+  EyeOff,
+  MapPin,
 } from "lucide-react";
 
 const MAP: Record<string, LucideIcon> = {
@@ -198,6 +201,8 @@ const MAP: Record<string, LucideIcon> = {
   "square.and.arrow.up": Upload,
   "square.and.arrow.down": Download,
   tray: Inbox,
+  "eye.slash": EyeOff,
+  mappin: MapPin,
   // arrows
   "chevron.left": ChevronLeft,
   "chevron.right": ChevronRight,

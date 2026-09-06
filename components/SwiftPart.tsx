@@ -557,6 +557,230 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
     case "divider":
       return <div style={{ width: p.w ?? 361, height: 1, background: c.separator }} />;
 
+    case "menu": {
+      // a button that opens a menu: same button styles, chevron.up.chevron.down trailing
+      const v = variantOf(p);
+      const styles: Record<string, React.CSSProperties> = {
+        bordered: { background: "transparent", border: `1.5px solid ${c.accent}`, color: c.accent },
+        borderedProminent: { background: c.accent, color: c.accentText, border: "none" },
+        gray: { background: c.fill, color: c.label, border: "none" },
+        plain: { background: "transparent", color: c.accent, border: "none" },
+        glass: {
+          background: dark ? "rgba(120,120,128,0.30)" : "rgba(255,255,255,0.60)",
+          backdropFilter: "blur(12px)",
+          border: dark ? "0.5px solid rgba(255,255,255,0.15)" : "0.5px solid rgba(255,255,255,0.80)",
+          color: c.accent,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+        },
+      };
+      return (
+        <div
+          style={{
+            width: p.w ?? 160,
+            height: p.h ?? 50,
+            borderRadius: capsule ? (p.h ?? 50) / 2 : 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            fontSize: 17,
+            fontWeight: 600,
+            fontFamily: fontStack,
+            ...styles[v],
+          }}
+        >
+          {p.icon ? <Icon name={p.icon} size={16} color={styles[v].color as string} /> : null}
+          {p.label}
+          <Icon name="chevron.up.chevron.down" size={11} color={styles[v].color as string} />
+        </div>
+      );
+    }
+
+    case "stepper":
+      // a label row with the UISegmented-like −/value/+ control on the right
+      return (
+        <div style={{ width: p.w ?? 220, height: p.h ?? 36, display: "flex", alignItems: "center", fontFamily: fontStack }}>
+          <div style={{ fontSize: 15, color: c.label, flex: 1, whiteSpace: "nowrap", overflow: "hidden" }}>{p.label}</div>
+          <div style={{ display: "flex", alignItems: "center", height: 32, borderRadius: 8, overflow: "hidden", background: c.fill, flex: "none" }}>
+            <div style={{ width: 32, height: 32, display: "grid", placeItems: "center", color: c.secondaryLabel, fontSize: 17 }}><Icon name="minus" size={13} /></div>
+            <div style={{ width: 1, height: 32, background: c.separator }} />
+            <div style={{ minWidth: 30, textAlign: "center", fontSize: 15, color: c.label, fontWeight: 600 }}>{p.value ?? 1}</div>
+            <div style={{ width: 1, height: 32, background: c.separator }} />
+            <div style={{ width: 32, height: 32, display: "grid", placeItems: "center", color: c.accent, fontSize: 17 }}><Icon name="plus" size={13} /></div>
+          </div>
+        </div>
+      );
+
+    case "datePicker": {
+      if (p.variant === "graphical") {
+        // a month grid: header, weekday letters, 5 rows of days, one selected
+        const days = Array.from({ length: 30 }, (_, i) => i + 1);
+        return (
+          <div style={{ width: p.w ?? 320, height: p.h ?? 320, borderRadius: 12, background: c.bg, fontFamily: fontStack, padding: 10, border: `1px solid ${c.separator}` }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: c.label, marginBottom: 6 }}>{p.label || (lang === "zh" ? "2026年9月" : "September 2026")}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, fontSize: 10, color: c.secondaryLabel, textAlign: "center" }}>
+              {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i}>{d}</div>)}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, fontSize: 12, color: c.label, textAlign: "center", marginTop: 4 }}>
+              {days.map((d) => (
+                <div key={d} style={{ width: 24, height: 24, margin: "0 auto", display: "grid", placeItems: "center", borderRadius: 12, background: d === 6 ? c.accent : "transparent", color: d === 6 ? c.accentText : c.label }}>{d}</div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div style={{ width: p.w ?? 240, height: p.h ?? 36, borderRadius: 8, background: c.fill, display: "flex", alignItems: "center", gap: 6, padding: "0 10px", fontFamily: fontStack }}>
+          <span style={{ fontSize: 15, color: c.label, flex: 1, whiteSpace: "nowrap", overflow: "hidden" }}>{p.supporting || p.label}</span>
+          <Icon name="calendar" size={15} color={c.accent} />
+          <Icon name="chevron.up.chevron.down" size={11} color={c.secondaryLabel} />
+        </div>
+      );
+    }
+
+    case "secureField": {
+      // a password field: label above, dot placeholder, eye.slash trailing
+      return (
+        <div style={{ width: p.w ?? 361, fontFamily: fontStack }}>
+          {p.label && <div style={{ fontSize: 11, color: c.secondaryLabel, marginBottom: 4, letterSpacing: 0.2 }}>{p.label}</div>}
+          <div
+            style={{
+              height: 40,
+              borderRadius: p.variant === "plain" ? 0 : 10,
+              background: p.variant === "plain" ? "transparent" : dark ? "rgba(118,118,128,0.24)" : "rgba(118,118,128,0.12)",
+              border: p.variant === "plain" ? "none" : "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: p.variant === "plain" ? 0 : "0 12px",
+            }}
+          >
+            <span style={{ fontSize: 17, color: c.secondaryLabel, letterSpacing: 2, flex: 1 }}>••••••••</span>
+            <Icon name="eye.slash" size={16} color={c.secondaryLabel} />
+          </div>
+        </div>
+      );
+    }
+
+    case "textEditor":
+      return (
+        <div
+          style={{
+            width: p.w ?? 280,
+            height: p.h ?? 120,
+            borderRadius: 8,
+            background: dark ? "rgba(118,118,128,0.24)" : "rgba(118,118,128,0.12)",
+            padding: 9,
+            fontSize: 15,
+            color: c.secondaryLabel,
+            fontFamily: fontStack,
+            textAlign: "left",
+            lineHeight: 1.4,
+          }}
+        >
+          {p.label || ""}
+        </div>
+      );
+
+    case "shareLink":
+      return (
+        <div style={{ width: p.w ?? 160, height: p.h ?? 50, borderRadius: capsule ? (p.h ?? 50) / 2 : 12, background: c.accent, color: c.accentText, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 17, fontWeight: 600, fontFamily: fontStack }}>
+          <Icon name={p.icon ?? "square.and.arrow.up"} size={17} color={c.accentText} />
+          {p.label}
+        </div>
+      );
+
+    case "link":
+      return (
+        <span style={{ width: p.w ?? 120, fontSize: 17, color: c.accent, textDecoration: "underline", fontFamily: fontStack, display: "inline-block" }}>{p.label}</span>
+      );
+
+    case "contentUnavailable":
+      return (
+        <div style={{ width: p.w ?? 361, height: p.h ?? 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: fontStack, padding: 16, textAlign: "center" }}>
+          <Icon name={p.icon ?? "tray"} size={44} color={c.secondaryLabel} />
+          <div style={{ fontSize: 17, fontWeight: 600, color: c.label }}>{p.label}</div>
+          <div style={{ fontSize: 13, color: c.secondaryLabel, textAlign: "center", maxWidth: 260 }}>{p.supporting}</div>
+        </div>
+      );
+
+    case "disclosure": {
+      const open = !!p.checked;
+      const rows = p.options ?? [];
+      return (
+        <div style={{ width: p.w ?? 361, fontFamily: fontStack }}>
+          <div style={{ height: 44, display: "flex", alignItems: "center", gap: 8, background: c.bg }}>
+            <span style={{ fontSize: 17, color: c.label, flex: 1 }}>{p.label}</span>
+            <Icon name="chevron.down" size={13} color={c.secondaryLabel} />
+          </div>
+          {open && rows.length > 0 && (
+            <div style={{ border: `1px solid ${c.separator}`, borderRadius: 10, overflow: "hidden", marginTop: 8 }}>
+              {rows.map((o, i) => (
+                <div key={i}>
+                  <div style={{ height: 44, display: "flex", alignItems: "center", padding: "0 12px", fontSize: 15, color: c.secondaryLabel }}>{o.label}</div>
+                  {i < rows.length - 1 && <div style={{ height: 0.5, background: c.separator }} />}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case "labeledContent":
+      return (
+        <div style={{ width: p.w ?? 361, height: p.h ?? 44, display: "flex", alignItems: "center", background: c.bg, padding: "0 12px", fontFamily: fontStack }}>
+          <span style={{ fontSize: 17, color: c.label }}>{p.label}</span>
+          <span style={{ fontSize: 17, color: c.secondaryLabel, marginLeft: "auto" }}>{p.supporting}</span>
+        </div>
+      );
+
+    case "map": {
+      // a light map: blocks, a diagonal avenue, a route polyline and a pin
+      const land = dark ? "#1c2a1e" : "#e8efe4";
+      const road = dark ? "#2e3d31" : "#f6f8f4";
+      return (
+        <div style={{ width: p.w ?? 361, height: p.h ?? 200, borderRadius: 12, background: land, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: 44, height: 14, background: road, transform: "rotate(-6deg)" }} />
+          <div style={{ position: "absolute", left: 0, right: 0, top: 120, height: 10, background: road, transform: "rotate(3deg)" }} />
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: 120, width: 12, background: road, transform: "rotate(8deg)" }} />
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: 260, width: 9, background: road }} />
+          <svg width="100%" height="100%" viewBox="0 0 361 200" style={{ position: "absolute", inset: 0 }}>
+            <path d="M 40 170 C 110 150, 150 90, 250 60" fill="none" stroke={c.accent} strokeWidth={4} strokeLinecap="round" opacity={0.9} />
+            <circle cx={250} cy={60} r={5} fill={c.accent} />
+          </svg>
+          <div style={{ position: "absolute", left: "50%", top: "42%", transform: "translate(-50%, -100%)", color: "#ff3b30" }}>
+            <Icon name="mappin" size={26} />
+          </div>
+        </div>
+      );
+    }
+
+    case "chart": {
+      if (p.variant === "line") {
+        const pts = [150, 110, 128, 70, 90, 40].map((y, i) => `${40 + i * 56},${y}`).join(" ");
+        return (
+          <div style={{ width: p.w ?? 361, height: p.h ?? 200, background: c.bg, borderRadius: 12, position: "relative", fontFamily: fontStack, padding: 10 }}>
+            <svg width="100%" height="100%" viewBox="0 0 340 180" preserveAspectRatio="none">
+              {[30, 80, 130].map((y) => <line key={y} x1={30} x2={330} y1={y} y2={y} stroke={c.separator} strokeWidth={1} />)}
+              <polyline points={pts} fill="none" stroke={c.accent} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        );
+      }
+      const bars = [60, 110, 84, 140, 96];
+      return (
+        <div style={{ width: p.w ?? 361, height: p.h ?? 200, background: c.bg, borderRadius: 12, position: "relative", fontFamily: fontStack, padding: 10 }}>
+          <div style={{ position: "absolute", left: 10, right: 10, bottom: 20, top: 16, display: "flex", alignItems: "flex-end", justifyContent: "space-around" }}>
+            {bars.map((h, i) => (
+              <div key={i} style={{ width: 26, height: `${(h / 150) * 100}%`, borderRadius: "5px 5px 2px 2px", background: i === 3 ? c.accent : c.accent, opacity: i === 3 ? 1 : 0.55 }} />
+            ))}
+          </div>
+          <div style={{ position: "absolute", left: 10, right: 10, bottom: 20, height: 1, background: c.separator }} />
+        </div>
+      );
+    }
+
     case "box":
       return (
         <div

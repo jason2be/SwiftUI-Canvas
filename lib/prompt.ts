@@ -155,6 +155,32 @@ function partZh(part0: Part, doc: Doc): string {
       return "分割线 Divider";
     case "box":
       return `${v}色的容器 RoundedRectangle（${it.w ?? 361}×${it.h ?? 220}pt）`;
+    case "menu":
+      return `菜单按钮 Menu：${v}样式，标签 ${label("zh", it.label)}，菜单项 ${optionsText("zh", it.options ?? [], false, doc)}${selText("zh", it.selected ?? 0)}`;
+    case "stepper":
+      return `步进器 Stepper：标签 ${label("zh", it.label)}，当前值 ${it.value ?? 1}`;
+    case "datePicker":
+      return it.variant === "graphical"
+        ? `日历视图 DatePicker(.graphical)：整月日历，选中 ${label("zh", it.supporting)}`
+        : `日期选择 DatePicker(.compact)：标签 ${label("zh", it.label)}，当前值 ${label("zh", it.supporting)}`;
+    case "secureField":
+      return `密码输入 SecureField：标签 ${label("zh", it.label)}，占位 ${label("zh", it.supporting)}，尾部有 eye.slash 图标`;
+    case "textEditor":
+      return `多行文本 TextEditor：占位 ${label("zh", it.label)}（${it.w ?? 280}×${it.h ?? 120}pt）`;
+    case "shareLink":
+      return `分享按钮 ShareLink：${label("zh", it.label)}（SF Symbol square.and.arrow.up）`;
+    case "link":
+      return `链接 Link：${label("zh", it.label)}（着色文字）`;
+    case "contentUnavailable":
+      return `空状态 ContentUnavailableView：图标 ${it.icon ?? "tray"}，标题 ${label("zh", it.label)}，说明 ${label("zh", it.supporting)}`;
+    case "disclosure":
+      return `展开分组 DisclosureGroup：标题 ${label("zh", it.label)}${it.checked ? "（展开）" : "（收起）"}，内容 ${optionsText("zh", it.options ?? [], false, doc)}`;
+    case "labeledContent":
+      return `标签行 LabeledContent：左侧 ${label("zh", it.label)}，右侧 ${label("zh", it.supporting)}`;
+    case "map":
+      return `地图占位 Map（${it.w ?? 361}×${it.h ?? 200}pt），带定位点`;
+    case "chart":
+      return `图表 Swift Charts（.${it.variant === "line" ? "lineMark" : "barMark"}，${it.w ?? 361}×${it.h ?? 200}pt）`;
   }
 }
 
@@ -202,6 +228,32 @@ function partEn(part0: Part, doc: Doc): string {
       return "A Divider";
     case "box":
       return `A ${v} rounded rectangle container (${it.w ?? 361}×${it.h ?? 220}pt)`;
+    case "menu":
+      return `A ${v} Menu labeled ${label("en", it.label)} with items ${optionsText("en", it.options ?? [], false, doc)}${selText("en", it.selected ?? 0)}`;
+    case "stepper":
+      return `A Stepper labeled ${label("en", it.label)} at ${it.value ?? 1}`;
+    case "datePicker":
+      return it.variant === "graphical"
+        ? `A graphical DatePicker (.graphical) with ${label("en", it.supporting)} selected`
+        : `A compact DatePicker labeled ${label("en", it.label)} showing ${label("en", it.supporting)}`;
+    case "secureField":
+      return `A SecureField labeled ${label("en", it.label)}, placeholder ${label("en", it.supporting)}, eye.slash trailing icon`;
+    case "textEditor":
+      return `A TextEditor with placeholder ${label("en", it.label)} (${it.w ?? 280}×${it.h ?? 120}pt)`;
+    case "shareLink":
+      return `A ShareLink labeled ${label("en", it.label)} (SF Symbol square.and.arrow.up)`;
+    case "link":
+      return `A Link reading ${label("en", it.label)} (tinted text)`;
+    case "contentUnavailable":
+      return `A ContentUnavailableView with icon ${it.icon ?? "tray"}, title ${label("en", it.label)}, description ${label("en", it.supporting)}`;
+    case "disclosure":
+      return `A DisclosureGroup titled ${label("en", it.label)}${it.checked ? " (expanded)" : " (collapsed)"} containing ${optionsText("en", it.options ?? [], false, doc)}`;
+    case "labeledContent":
+      return `A LabeledContent row: ${label("en", it.label)} on the left, ${label("en", it.supporting)} on the right`;
+    case "map":
+      return `A Map placeholder (${it.w ?? 361}×${it.h ?? 200}pt) with a location pin`;
+    case "chart":
+      return `A Swift Charts chart (.${it.variant === "line" ? "lineMark" : "barMark"}, ${it.w ?? 361}×${it.h ?? 200}pt)`;
   }
 }
 
