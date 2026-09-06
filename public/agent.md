@@ -32,9 +32,9 @@ print("<app-url>#sw=" + base64.urlsafe_b64encode(raw).decode().rstrip("="))
 
 The link is long (a few thousand characters for a few screens). That is expected; it carries the whole design and nothing is stored anywhere.
 
-> `<app-url>` above is a placeholder: replace it with the URL this app is
-> hosted at, e.g. `http://localhost:3000` during development or
-> `https://<user>.github.io/<repo>` for a GitHub Pages deployment.
+> `<app-url>` above is `https://jason2be.github.io/SwiftUI-Canvas` for the
+> hosted deployment. If you are developing locally, use
+> `http://localhost:3000` instead; if self-hosting, use your own origin.
 
 Rough placement is fine. The person presses **Tidy** and bars snap to the edges while the rest stacks on 16pt margins. Spend your effort on the right parts, sensible labels, and the navigation between screens.
 

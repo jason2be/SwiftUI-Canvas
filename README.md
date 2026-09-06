@@ -5,7 +5,8 @@
 <h1 align="center">SwiftUI Canvas</h1>
 
 <p align="center">
-  <strong>Sketch SwiftUI screens in the browser, link them, tap through them, and copy a prompt for your AI coding tool.</strong>
+  <strong>Sketch SwiftUI screens in the browser, link them, tap through them, and copy a prompt for your AI coding tool.</strong><br />
+  <a href="https://jason2be.github.io/SwiftUI-Canvas/"><strong>Open the app →</strong></a>
 </p>
 
 <p align="center">
@@ -84,6 +85,8 @@ MIT © SwiftUI Canvas contributors
 ## 中文
 
 **在浏览器中拼装 SwiftUI 界面，把屏幕连起来、点一点试试，然后直接变成给 AI 编程工具的提示词。**
+
+**在线使用 →** <https://jason2be.github.io/SwiftUI-Canvas/>
 
 m3e-canvas（Material 3 Expressive）的姐妹项目：同一个想法，换到 iOS 这一边——这里的组件与提示词全部面向 **SwiftUI**。
 
