@@ -10,7 +10,8 @@ const KINDS = new Set<string>(KIND_ORDER);
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 const isVariantFor = (kind: string, variant: unknown): boolean =>
-  typeof variant === "string" && (KIND_VARIANTS[kind as keyof typeof KIND_VARIANTS] ?? []).some((k) => k === variant);
+  variant === undefined || // the renderer/prompt fall back to the kind's first variant
+  (typeof variant === "string" && (KIND_VARIANTS[kind as keyof typeof KIND_VARIANTS] ?? []).some((k) => k === variant));
 
 const isTransition = (t: unknown): boolean => typeof t === "string" && (TRANSITIONS as string[]).includes(t);
 

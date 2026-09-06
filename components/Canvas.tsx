@@ -480,7 +480,7 @@ function hitScreen(doc: Doc, x: number, y: number): Screen | null {
 }
 
 export function defaultW(p: Part): number {
-  return p.w ?? (p.kind === "navBar" || p.kind === "tabBar" || p.kind === "sheet" ? SCREEN_W : 160);
+  return p.w ?? partSize(p.kind, p).w;
 }
 
 export function addScreenAt(doc: Doc, lang: "en" | "zh"): Doc {

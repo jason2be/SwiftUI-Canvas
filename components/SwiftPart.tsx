@@ -3,7 +3,7 @@
 import React from "react";
 import type { Lang } from "@/lib/i18n";
 import type { Palette } from "@/lib/theme";
-import type { Part } from "@/lib/tokens";
+import { variantOf, type Part } from "@/lib/tokens";
 import Icon from "./Icon";
 
 /* Draws one part with iOS visuals. Coordinates come from the canvas wrapper:
@@ -26,6 +26,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
 
   switch (p.kind) {
     case "button": {
+      const v = variantOf(p);
       const styles: Record<string, React.CSSProperties> = {
         bordered: { background: "transparent", border: `1.5px solid ${c.accent}`, color: c.accent },
         borderedProminent: { background: c.accent, color: c.accentText, border: "none" },
@@ -59,18 +60,19 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             fontSize: 17,
             fontWeight: 600,
             fontFamily: fontStack,
-            ...styles[p.variant],
+            ...styles[v],
           }}
         >
-          {p.icon ? <Icon name={p.icon} size={17} color={styles[p.variant].color as string} /> : null}
+          {p.icon ? <Icon name={p.icon} size={17} color={styles[v].color as string} /> : null}
           {p.label}
         </div>
       );
     }
 
     case "iconButton": {
-      const prominent = p.variant === "borderedProminent" || p.variant === "glassProminent";
-      const glass = p.variant === "glass" || p.variant === "glassProminent";
+      const v = variantOf(p);
+      const prominent = v === "borderedProminent" || v === "glassProminent";
+      const glass = v === "glass" || v === "glassProminent";
       const size = p.w ?? 44;
       return (
         <div
@@ -81,8 +83,8 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: prominent ? c.accent : glass ? (dark ? "rgba(120,120,128,0.30)" : "rgba(255,255,255,0.60)") : p.variant === "gray" ? c.fill : "transparent",
-            border: p.variant === "bordered" ? `1.5px solid ${c.accent}` : glass ? (dark ? "0.5px solid rgba(255,255,255,0.16)" : "0.5px solid rgba(255,255,255,0.85)") : "none",
+            background: prominent ? c.accent : glass ? (dark ? "rgba(120,120,128,0.30)" : "rgba(255,255,255,0.60)") : v === "gray" ? c.fill : "transparent",
+            border: v === "bordered" ? `1.5px solid ${c.accent}` : glass ? (dark ? "0.5px solid rgba(255,255,255,0.16)" : "0.5px solid rgba(255,255,255,0.85)") : "none",
             backdropFilter: glass ? "blur(12px)" : undefined,
             boxShadow: glass ? "0 1px 4px rgba(0,0,0,0.12)" : undefined,
           }}
@@ -258,7 +260,10 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
       );
 
     case "navBar": {
-      const large = p.variant === "large";
+      const large = variantOf(p) === "large";
+      // iOS layout: back chevron and the trailing action share the top 44pt
+      // row; the large title sits in the lower half, left-aligned at 16pt
+      const rowTop = large ? 10 : 15;
       return (
         <div
           style={{
@@ -272,7 +277,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             color: c.label,
           }}
         >
-          <div style={{ position: "absolute", left: 8, top: large ? 50 : 12, display: "flex", alignItems: "center", gap: 2, color: c.accent }}>
+          <div style={{ position: "absolute", left: 8, top: rowTop, display: "flex", alignItems: "center", gap: 2, color: c.accent }}>
             {p.icon ? (
               <>
                 <Icon name={p.icon} size={20} color={c.accent} />
@@ -281,11 +286,11 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             ) : null}
           </div>
           {large ? (
-            <div style={{ position: "absolute", left: 16, bottom: 6, fontSize: 34, fontWeight: 700, letterSpacing: 0.4 }}>{p.label}</div>
+            <div style={{ position: "absolute", left: 16, bottom: 8, fontSize: 34, fontWeight: 700, letterSpacing: 0.4 }}>{p.label}</div>
           ) : (
-            <div style={{ position: "absolute", left: 0, right: 0, top: 14, textAlign: "center", fontSize: 17, fontWeight: 600 }}>{p.label}</div>
+            <div style={{ position: "absolute", left: 0, right: 0, top: 15, textAlign: "center", fontSize: 17, fontWeight: 600 }}>{p.label}</div>
           )}
-          <div style={{ position: "absolute", right: 12, top: large ? 52 : 13 }}>
+          <div style={{ position: "absolute", right: 12, top: rowTop, display: "flex", alignItems: "center" }}>
             <Icon name={p.icon2} size={20} color={c.accent} />
           </div>
         </div>
@@ -325,7 +330,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
 
     case "list": {
       const opts = p.options ?? [];
-      const inset = p.variant === "insetGrouped";
+      const inset = variantOf(p) === "insetGrouped";
       return (
         <div
           style={{
@@ -367,9 +372,9 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             width: p.w ?? 361,
             height: p.h ?? 140,
             borderRadius: 12,
-            background: p.variant === "filled" ? c.panel : "transparent",
-            border: p.variant === "stroke" ? `1px solid ${c.separator}` : "none",
-            boxShadow: p.variant === "filled" && !dark ? "0 1px 3px rgba(0,0,0,0.08)" : undefined,
+            background: variantOf(p) === "filled" ? c.panel : "transparent",
+            border: variantOf(p) === "stroke" ? `1px solid ${c.separator}` : "none",
+            boxShadow: variantOf(p) === "filled" && !dark ? "0 1px 3px rgba(0,0,0,0.08)" : undefined,
             padding: 14,
             fontFamily: fontStack,
             boxSizing: "border-box",
@@ -446,7 +451,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
 
     case "progress": {
       const v = p.value;
-      if (p.variant === "circular") {
+      if (variantOf(p) === "circular") {
         const pct = v === undefined ? 0.25 : v / 100;
         const R = 20;
         const CIRC = 2 * Math.PI * R;
@@ -502,8 +507,9 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
     }
 
     case "text": {
-      const size = ({ largeTitle: 34, title: 28, headline: 17, body: 17, callout: 16, footnote: 13, caption: 12 } as Record<string, number>)[p.variant] ?? 17;
-      const weight = p.variant === "largeTitle" || p.variant === "title" ? 700 : p.variant === "headline" ? 600 : 400;
+      const size = ({ largeTitle: 34, title: 28, headline: 17, body: 17, callout: 16, footnote: 13, caption: 12 } as Record<string, number>)[variantOf(p)] ?? 17;
+      const v = variantOf(p);
+      const weight = v === "largeTitle" || v === "title" ? 700 : v === "headline" ? 600 : 400;
       return (
         <div
           style={{
@@ -553,7 +559,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             width: p.w ?? 361,
             height: p.h ?? 220,
             borderRadius: 12,
-            background: p.variant === "background" ? c.bg : p.variant === "secondary" ? c.panel : c.fill,
+            background: variantOf(p) === "background" ? c.bg : variantOf(p) === "secondary" ? c.panel : c.fill,
             border: `0.5px solid ${c.separator}`,
             boxSizing: "border-box",
           }}

@@ -289,15 +289,15 @@ export function partSize(kind: Kind, part?: Partial<Part>): { w: number; h: numb
     case "card":
       return { w: 361, h: 140 };
     case "alert":
-      return { w: 270, h: 170 };
+      return { w: 270, h: 124 }; // rendered height: title + message + 44pt actions
     case "sheet":
       return { w: SCREEN_W, h: part?.h ?? 260 };
     case "progress":
-      return { w: 300, h: part?.variant === "circular" ? 60 : 20 };
+      return { w: 300, h: part?.variant === "circular" ? 60 : 4 }; // linear bar is 4pt tall
     case "gauge":
       return { w: 160, h: 120 };
     case "text":
-      return { w: 300, h: 34 };
+      return { w: 300, h: 21 }; // one line of 17pt body
     case "image":
       return { w: 200, h: 200 };
     case "divider":
@@ -305,6 +305,12 @@ export function partSize(kind: Kind, part?: Partial<Part>): { w: number; h: numb
     case "box":
       return { w: 361, h: 220 };
   }
+}
+
+/** the variant a part renders/prompt-writes with, defaulting to the kind's first */
+export function variantOf(p: Pick<Part, "kind" | "variant">): Variant {
+  const list = KIND_VARIANTS[p.kind];
+  return list.includes(p.variant) ? p.variant : list[0];
 }
 
 export function defaultPart(lang: Lang, screenId: string, kind: Kind, x: number, y: number): Part {

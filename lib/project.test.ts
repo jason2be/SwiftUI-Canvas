@@ -21,6 +21,12 @@ describe("project files", () => {
     expect(isProject(bad)).toBe(false);
   });
 
+  it("accepts a part without a variant (the renderer falls back to the kind's default)", () => {
+    const doc: Doc = JSON.parse(JSON.stringify(newDoc("en")));
+    (doc.parts[0] as { variant?: string }).variant = undefined;
+    expect(isProject(doc)).toBe(true);
+  });
+
   it("rejects a malformed link (would crash buildPrompt)", () => {
     const bad: Doc = JSON.parse(JSON.stringify(newDoc("en")));
     bad.parts[0].link = { target: 123 } as never;

@@ -10,6 +10,7 @@ import {
   type Screen,
   partsOf,
   screenName,
+  variantOf,
 } from "./tokens";
 import { accentHex } from "./theme";
 
@@ -108,7 +109,8 @@ function partText(lang: Lang, it: Part, doc: Doc): string {
   return lang === "zh" ? partZh(it, doc) : partEn(it, doc);
 }
 
-function partZh(it: Part, doc: Doc): string {
+function partZh(part0: Part, doc: Doc): string {
+  const it = { ...part0, variant: variantOf(part0) };
   const v = variantText("zh", it.variant);
   switch (it.kind) {
     case "button":
@@ -156,7 +158,8 @@ function partZh(it: Part, doc: Doc): string {
   }
 }
 
-function partEn(it: Part, doc: Doc): string {
+function partEn(part0: Part, doc: Doc): string {
+  const it = { ...part0, variant: variantOf(part0) };
   const v = variantText("en", it.variant);
   switch (it.kind) {
     case "button":
