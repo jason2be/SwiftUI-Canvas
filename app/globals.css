@@ -558,9 +558,65 @@ body {
   border-color: var(--accent);
 }
 
+.align-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.align-sec::before {
+  content: attr(data-title);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.align-row {
+  display: flex;
+  gap: 6px;
+}
+
+.align-btn {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  height: 44px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text-1);
+  border-radius: 9px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.align-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.align-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.align-btn:disabled:hover {
+  border-color: var(--line);
+  color: var(--text-1);
+}
+
+.align-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
 .icon-btn.sm {
-  width: 30px;
-  justify-content: center;
+  width: 30px;  justify-content: center;
   padding: 4px 0;
   flex: none;
 }

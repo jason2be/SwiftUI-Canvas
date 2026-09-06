@@ -12,6 +12,7 @@ import {
   type Transition,
 } from "@/lib/tokens";
 import Icon from "./Icon";
+import AlignSection from "./AlignSection";
 import type { Editor } from "@/lib/store";
 
 /* Right panel: inspector for the selection (or the active screen), plus a
@@ -45,6 +46,8 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
         <button className={tab === "inspector" ? "on" : ""} onClick={() => setTab("inspector")}>{t("panel.inspector")}</button>
         <button className={tab === "layers" ? "on" : ""} onClick={() => setTab("layers")}>{t("panel.layers")}</button>
       </div>
+
+      <AlignSection editor={editor} />
 
       {tab === "layers" ? (
         <div className="layers">

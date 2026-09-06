@@ -33,6 +33,7 @@ Works with any AI coding tool that takes a prompt — Claude Code, Codex, Gemini
 - **Theme** – accent color (iOS system palette presets or any hex), light / dark appearance, default or capsule shapes, and the system font designs: rounded, serif, monospaced.
 - **Prompt output** – the whole design (or a single screen) becomes a concise brief in English or Chinese, including your per-part behavior notes. The brief pins the toolchain to a **modern SwiftUI baseline**: NavigationStack, TabView + Tab, @Observable, `foregroundStyle`, Liquid Glass (`glassEffect`, `buttonStyle(.glass)`), scroll edge effects, the zoom navigation transition — and mentions what the iOS 27 beta adds without depending on it. Screen names and labels travel verbatim, SF Symbol names are used as given.
 - **Tidy** – one button snaps bars to the edges and stacks the rest on 16pt margins.
+- **Align** – one part lines up with the screen's body (inside the margins, clear of the bars); several parts line up with each other, or space out evenly between the two outer ones. Every action has an undo and steps aside instead of landing on another part.
 - **Share links and agent drafts (beta)** – copy a link that opens your design on anyone's canvas; or point a coding agent at [public/agent.md](public/agent.md) and it sketches what you described, then replies with such a link.
 - **Layers** – a layers panel lists the z-order of the active screen with reorder buttons.
 - Undo/redo, keyboard shortcuts, duplicate, nudge, save/open JSON, share links, and everything autosaves to your browser (localStorage). No backend, no account.
@@ -100,6 +101,7 @@ m3e-canvas（Material 3 Expressive）的姐妹项目：同一个想法，换到 
 - **主题** – 强调色（iOS 系统色预设或任意十六进制色）、浅色／深色外观、默认或胶囊形状、系统字体设计（圆体、衬线、等宽）。
 - **提示词输出** – 整个设计（或单个屏幕）会变成简洁的英文或中文提示词，并包含你为每个组件写的行为说明。提示词把技术基线锁定在**现代 SwiftUI**：NavigationStack、TabView + Tab、@Observable、`foregroundStyle`、Liquid Glass（`glassEffect`、`buttonStyle(.glass)`）、滚动边缘效果、缩放过渡——并提到 iOS 27 beta 的新增项但不作为依赖。屏幕名与文案按原文传递，SF Symbol 名称原样使用。
 - **整理** – 一键把栏贴到边缘，其余组件按 16pt 边距重新堆叠。
+- **对齐** – 单个组件与屏幕正文区对齐（边距以内、栏以外）；多个组件互相左中右／顶中底对齐，或在两端之间等距分布。每一步都可撤销，且不会压到其他组件上。
 - **分享链接与代理草图（测试版）** – 复制一个能在他人画布上打开你设计的链接；也可以让编程代理阅读 [public/agent.md](public/agent.md)，它会画出你描述的草图并以链接回复。
 - **图层** – 图层面板显示当前屏幕的层叠顺序，可一键上移／下移。
 - 撤销／重做、键盘快捷键、复制、微调、保存／打开 JSON、分享链接，所有内容自动保存在浏览器（localStorage）中。无后端，无账号。
