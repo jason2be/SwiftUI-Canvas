@@ -268,8 +268,12 @@ function screenText(lang: Lang, doc: Doc, screen: Screen, withHeading: boolean):
   const bars = parts.filter((p) => p.kind === "navBar" || p.kind === "tabBar");
   const rest = parts.filter((p) => !bars.includes(p));
   const lines: string[] = [];
-  if (withHeading) lines.push(`## ${lang === "zh" ? "屏幕" : "Screen"}: ${screen.name} (iPhone, ${SCREEN_W}×${SCREEN_H}pt)`);
-  else lines.push(`### ${screen.name}`);
+  if (withHeading) {
+    const bg = screen.bg && screen.bg !== "system" ? `${lang === "zh" ? "背景 " : "background "}${screen.bg}` : "";
+    lines.push(`## ${lang === "zh" ? "屏幕" : "Screen"}: ${screen.name} (iPhone, ${SCREEN_W}×${SCREEN_H}pt)${bg ? `, ${bg}` : ""}`);
+  } else {
+    lines.push(`### ${screen.name}${screen.bg && screen.bg !== "system" ? (lang === "zh" ? `（背景 ${screen.bg}）` : ` (background ${screen.bg})`) : ""}`);
+  }
 
   for (const bar of bars) {
     lines.push(`- ${partText(lang, bar, doc)}${noteText(lang, bar)}${linkText(lang, bar, doc)}`);

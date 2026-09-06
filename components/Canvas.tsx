@@ -26,7 +26,7 @@ import {
   snapTargetsFor,
   type GuideLine,
 } from "@/lib/snapping";
-import { partSize, MARGIN } from "@/lib/tokens";
+import { partSize, MARGIN, screenBgCss } from "@/lib/tokens";
 
 /* The infinite canvas: screens laid out in document space, pan/zoom in view
  * space, drag & drop from the palette, drag to move parts, link arrows. */
@@ -382,7 +382,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
               </div>
               <div
                 className={`screen-frame${isActive ? " active" : ""}`}
-                style={{ width: SCREEN_W, height: SCREEN_H, background: doc.theme.scheme === "dark" ? "#000" : "#F2F2F7" }}
+                style={{ width: SCREEN_W, height: SCREEN_H, background: screenBgCss(screen.bg, doc.theme.scheme === "dark") }}
                 onPointerDown={(e) => onScreenDown(e, screen)}
                 role="presentation"
               >

@@ -5,10 +5,12 @@ import { getT, KIND_TEXT, TRANSITION_TEXT, VARIANT_TEXT } from "@/lib/i18n";
 import {
   BACK_TARGET,
   KIND_VARIANTS,
+  SCREEN_BGS,
   duplicatePart,
   partsOf,
   screenById,
   type Part,
+  type Screen,
   type Transition,
 } from "@/lib/tokens";
 import Icon from "./Icon";
@@ -308,6 +310,26 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                     value={s.name}
                     onChange={(e) => mutate((d) => ({ ...d, screens: d.screens.map((x) => (x.id === s.id ? { ...x, name: e.target.value } : x)) }), `sname:${s.id}`)}
                   />
+                </Field>
+                <Field label={t("field.bg")}>
+                  <div className="seg">
+                    {SCREEN_BGS.map((b) => {
+                      const on = b === "system" ? !s.bg : s.bg === b;
+                      return (
+                        <button key={b} className={on ? "on" : ""} onClick={() => mutate((d) => ({ ...d, screens: d.screens.map((x) => (x.id === s.id ? { ...x, bg: b === "system" ? undefined : b } : x)) }), `sbg:${s.id}`)}>
+                          {t(`bg.${b}`)}
+                        </button>
+                      );
+                    })}
+                    <label className={`bg-custom${s.bg && s.bg.startsWith("#") ? " on" : ""}`} title={t("bg.custom")}>
+                      <input
+                        type="color"
+                        value={s.bg && s.bg.startsWith("#") ? s.bg : "#5856D6"}
+                        onChange={(e) => mutate((d) => ({ ...d, screens: d.screens.map((x) => (x.id === s.id ? { ...x, bg: e.target.value } : x)) }), `sbg:${s.id}`)}
+                      />
+                      {t("bg.custom")}
+                    </label>
+                  </div>
                 </Field>
                 <Field label={t("screen.note")}>
                   <textarea

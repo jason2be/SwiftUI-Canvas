@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getT } from "@/lib/i18n";
 import { paletteOf } from "@/lib/theme";
-import { BACK_TARGET, partsOf, screenById, type Part, type Transition } from "@/lib/tokens";
+import { BACK_TARGET, partsOf, screenBgCss, screenById, type Part, type Transition } from "@/lib/tokens";
 import SwiftPart from "./SwiftPart";
 import type { Editor } from "@/lib/store";
 
@@ -160,11 +160,11 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
             width: 393,
             height: 852,
             transform: `scale(${scale})`,
-            background: doc.theme.scheme === "dark" ? "#000" : "#F2F2F7",
+            background: screenBgCss(screen.bg, doc.theme.scheme === "dark"),
           }}
         >
           {/* the screen underneath the transition */}
-          <div className="preview-screen">
+          <div className="preview-screen" style={{ background: screenBgCss(under.bg, doc.theme.scheme === "dark") }}>
             <div className="screen-island" />
             {partsOf(doc, under.id).map((p) => {
               const interactive = !anim && under.id === top;
@@ -191,7 +191,7 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
 
           {/* the moving screen during a transition */}
           {anim && mover ? (
-            <div key={anim.n} className={`preview-screen ${moverClass}`}>
+            <div key={anim.n} className={`preview-screen ${moverClass}`} style={{ background: screenBgCss(mover.bg, doc.theme.scheme === "dark") }}>
               <div className="screen-island" />
               {partsOf(doc, mover.id).map((p) => (
                 <div key={p.id} className="part-wrap preview-part" style={{ left: p.x, top: p.y, width: p.w ?? 160 }}>

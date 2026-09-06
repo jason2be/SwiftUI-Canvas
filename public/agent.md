@@ -65,12 +65,13 @@ Accent presets: `systemBlue`, `systemIndigo`, `systemPurple`, `systemPink`, `sys
 A screen is **393 × 852** logical points (iPhone). Place screens side by side on the canvas, about 120 apart:
 
 ```json
-{ "id": "home", "name": "Home", "x": 0, "y": 0, "note": "Lists the saved timers." }
+{ "id": "home", "name": "Home", "x": 0, "y": 0, "bg": "grouped", "note": "Lists the saved timers." }
 { "id": "detail", "name": "Timer", "x": 513, "y": 0 }
 ```
 
 - `id`: any unique string. `name`: what the screen is called in the prompt (keep the person's language).
 - `note` (optional): what the screen is for, in a sentence. It goes into the prompt.
+- `bg` (optional): `"system"` (default), `"secondary"`, `"grouped"`, or any `"#rrggbb"` color. It paints the screen behind the parts and goes into the prompt.
 
 ### Parts
 

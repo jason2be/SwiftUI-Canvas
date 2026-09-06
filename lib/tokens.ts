@@ -208,6 +208,19 @@ export interface Screen {
   x: number;
   y: number;
   note?: string;
+  /** screen background: a system token or a #hex color; system = default */
+  bg?: string;
+}
+
+/** the named screen backgrounds; anything else valid is a #hex color */
+export const SCREEN_BGS = ["system", "secondary", "grouped"] as const;
+
+/** the CSS color for a screen background, per scheme */
+export function screenBgCss(bg: string | undefined, dark: boolean): string {
+  if (!bg || bg === "system") return dark ? "#000000" : "#ffffff";
+  if (bg === "secondary") return dark ? "#1C1C1E" : "#F2F2F7";
+  if (bg === "grouped") return dark ? "#111113" : "#EFEFF4";
+  return bg; // #hex
 }
 
 export interface Theme {

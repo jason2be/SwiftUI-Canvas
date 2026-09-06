@@ -81,6 +81,11 @@ const en: Dict = {
   "field.width": "Width",
   "field.height": "Height",
   "field.language": "Language",
+  "field.bg": "Background",
+  "bg.system": "System",
+  "bg.secondary": "Secondary",
+  "bg.grouped": "Grouped",
+  "bg.custom": "Custom",
 
   "screen.device": "Device",
   "screen.background": "Background",
@@ -201,6 +206,11 @@ const zh: Dict = {
   "field.width": "宽度",
   "field.height": "高度",
   "field.language": "语言",
+  "field.bg": "背景",
+  "bg.system": "系统",
+  "bg.secondary": "次级",
+  "bg.grouped": "分组",
+  "bg.custom": "自定义",
 
   "screen.device": "设备",
   "screen.background": "背景",

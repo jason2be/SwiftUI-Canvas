@@ -1,4 +1,4 @@
-import { KIND_ORDER, KIND_VARIANTS, TRANSITIONS, type Doc } from "./tokens";
+import { KIND_ORDER, KIND_VARIANTS, SCREEN_BGS, TRANSITIONS, type Doc } from "./tokens";
 
 /* A project file is the Doc as JSON, nothing more. Reading one back only
  * checks the shape the editor relies on — strictly enough that a malformed
@@ -52,7 +52,8 @@ const validScreen = (s: unknown): boolean =>
   typeof s.name === "string" &&
   finite(s.x) &&
   finite(s.y) &&
-  (s.note === undefined || typeof s.note === "string");
+  (s.note === undefined || typeof s.note === "string") &&
+  (s.bg === undefined || (typeof s.bg === "string" && (SCREEN_BGS.includes(s.bg as never) || /^#[0-9a-fA-F]{3,8}$/.test(s.bg))));
 
 const validTheme = (t: unknown): boolean =>
   isRecord(t) &&
