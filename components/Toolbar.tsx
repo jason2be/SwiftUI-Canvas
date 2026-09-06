@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { getT } from "@/lib/i18n";
+import Icon from "@/components/Icon";
 import { readProject, saveProject } from "@/lib/project";
 import { shareLink } from "@/lib/share";
 import type { Editor } from "@/lib/store";
@@ -57,25 +58,43 @@ export default function Toolbar({ editor, onAddScreen, onTidy, onPreview, onProm
 
       <div className="tool-groups">
         <div className="tool-group">
-          <button className="tb" onClick={onAddScreen} title={t("action.addScreen")}>＋ {t("action.addScreen")}</button>
-          <button className="tb" onClick={undo} disabled={!canUndo} title={t("action.undo")}>↺</button>
-          <button className="tb" onClick={redo} disabled={!canRedo} title={t("action.redo")}>↻</button>
-          <button className="tb" onClick={onTidy} title={t("action.tidy")}>{t("action.tidy")}</button>
+          <button className="tb" onClick={onAddScreen} title={t("action.addScreen")}>
+            <Icon name="plus.rectangle.on.rectangle" size={15} /> {t("action.addScreen")}
+          </button>
+          <button className="tb icon-only" onClick={undo} disabled={!canUndo} title={t("action.undo")} aria-label={t("action.undo")}>
+            <Icon name="arrow.uturn.backward" size={16} />
+          </button>
+          <button className="tb icon-only" onClick={redo} disabled={!canRedo} title={t("action.redo")} aria-label={t("action.redo")}>
+            <Icon name="arrow.uturn.forward" size={16} />
+          </button>
+          <button className="tb" onClick={onTidy} title={t("action.tidy")}>
+            <Icon name="wand.and.stars" size={15} /> {t("action.tidy")}
+          </button>
         </div>
 
         <div className="tool-group">
-          <button className="tb" onClick={onShare} title={t("action.share")}>{t("action.share")}</button>
-          <button className="tb" onClick={() => saveProject(doc)} title={t("action.save")}>{t("action.save")}</button>
-          <button className="tb" onClick={() => fileRef.current?.click()} title={t("action.open")}>{t("action.open")}</button>
+          <button className="tb" onClick={onShare} title={t("action.share")}>
+            <Icon name="square.and.arrow.up" size={15} /> {t("action.share")}
+          </button>
+          <button className="tb" onClick={() => saveProject(doc)} title={t("action.save")}>
+            <Icon name="square.and.arrow.down" size={15} /> {t("action.save")}
+          </button>
+          <button className="tb" onClick={() => fileRef.current?.click()} title={t("action.open")}>
+            <Icon name="folder" size={15} /> {t("action.open")}
+          </button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={onFile} />
         </div>
 
         <div className="tool-group">
           <button className="tb" onClick={() => setLang(lang === "zh" ? "en" : "zh")} title={t("field.language")}>
-            {lang === "zh" ? "EN" : "中文"}
+            <Icon name="globe" size={15} /> {lang === "zh" ? "EN" : "中文"}
           </button>
-          <button className="tb" onClick={onPreview} title={t("action.preview")}>▶ {t("action.preview")}</button>
-          <button className="tb primary" onClick={onPrompt} title={t("action.prompt")}>{t("action.prompt")}</button>
+          <button className="tb" onClick={onPreview} title={t("action.preview")}>
+            <Icon name="play" size={15} /> {t("action.preview")}
+          </button>
+          <button className="tb primary" onClick={onPrompt} title={t("action.prompt")}>
+            <Icon name="text.bubble" size={15} /> {t("action.prompt")}
+          </button>
         </div>
       </div>
 

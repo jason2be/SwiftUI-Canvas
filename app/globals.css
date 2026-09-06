@@ -100,6 +100,13 @@ body {
   cursor: pointer;
   font-size: 13px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tb.icon-only {
+  padding: 5px 7px;
 }
 
 .tb:hover {
@@ -400,6 +407,9 @@ body {
   height: 26px;
   border-radius: 7px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .canvas-hud button:hover {

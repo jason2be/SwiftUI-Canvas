@@ -42,7 +42,7 @@ export default function IconPicker({ initial, onPick, onClose, lang }: Props) {
         <div className="modal-head">
           <strong>SF Symbols</strong>
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="name…" className="search-input" />
-          <button className="icon-btn" onClick={onClose}>✕</button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="xmark" size={14} /></button>
         </div>
         <div className="seg seg-cats">
           {CATS.map((c) => (

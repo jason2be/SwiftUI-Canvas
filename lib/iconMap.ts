@@ -111,6 +111,14 @@ import {
   Wallet,
   Wifi,
   X,
+  CopyPlus,
+  Globe,
+  Maximize2,
+  Redo2,
+  Undo2,
+  WandSparkles,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 const MAP: Record<string, LucideIcon> = {
@@ -122,6 +130,16 @@ const MAP: Record<string, LucideIcon> = {
   minus: Minus,
   xmark: X,
   checkmark: Check,
+  // editor chrome
+  "arrow.uturn.backward": Undo2,
+  "arrow.uturn.forward": Redo2,
+  "wand.and.stars": WandSparkles,
+  "plus.rectangle.on.rectangle": CopyPlus,
+  "text.bubble": MessageCircle,
+  globe: Globe,
+  "plus.magnifyingglass": ZoomIn,
+  "minus.magnifyingglass": ZoomOut,
+  "arrow.up.left.and.arrow.down.right": Maximize2,
   person: User,
   "person.2": Users,
   heart: Heart,

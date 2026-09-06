@@ -219,13 +219,14 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                     className="icon-btn sm"
                     onClick={() => patch(part.id, { options: (part.options ?? []).filter((_, j) => j !== i) })}
                     title={t("action.delete")}
+                    aria-label={t("action.delete")}
                   >
-                    ×
+                    <Icon name="xmark" size={13} />
                   </button>
                 </div>
               ))}
               <button className="mini" onClick={() => patch(part.id, { options: [...(part.options ?? []), { label: lang === "zh" ? "新选项" : "New item" }] })}>
-                ＋ {t("field.addItem")}
+                <Icon name="plus" size={13} /> {t("field.addItem")}
               </button>
             </div>
           )}

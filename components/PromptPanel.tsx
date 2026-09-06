@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Icon from "@/components/Icon";
 import { getT } from "@/lib/i18n";
 import { buildPrompt, type PromptScope } from "@/lib/prompt";
 import type { Editor } from "@/lib/store";
@@ -57,7 +58,7 @@ export default function PromptPanel({ editor, onClose }: Props) {
             ))}
           </div>
           <button className="mini primary" onClick={copy}>{copied ? t("action.copied") : t("action.copy")}</button>
-          <button className="icon-btn" onClick={onClose}>✕</button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="xmark" size={14} /></button>
         </div>
         <textarea className="prompt-text" readOnly value={text} spellCheck={false} />
         <div className="modal-foot">

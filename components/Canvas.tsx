@@ -377,7 +377,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
                     }
                   }}
                 >
-                  ×
+                  <Icon name="xmark" size={14} />
                 </button>
               </div>
               <div
@@ -464,9 +464,9 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       </div>
 
       <div className="canvas-hud">
-        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(1)} title="Zoom in">＋</button>
-        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(-1)} title="Zoom out">－</button>
-        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(0)} title="Fit (0)">⤢</button>
+        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(1)} title="Zoom in" aria-label="Zoom in"><Icon name="plus.magnifyingglass" size={15} /></button>
+        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(-1)} title="Zoom out" aria-label="Zoom out"><Icon name="minus.magnifyingglass" size={15} /></button>
+        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(0)} title="Fit (0)" aria-label="Fit"><Icon name="arrow.up.left.and.arrow.down.right" size={15} /></button>
         <span className="zoom-num">{Math.round(view.z * 100)}%</span>
       </div>
       {doc.screens.length === 0 ? <div className="canvas-empty">{t("screen.empty")}</div> : null}

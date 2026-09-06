@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Canvas, { addScreenAt } from "@/components/Canvas";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import IconPicker from "@/components/IconPicker";
+import Icon from "@/components/Icon";
 import Inspector, { type IconField } from "@/components/Inspector";
 import PartsPalette from "@/components/PartsPalette";
 import Preview from "@/components/Preview";
@@ -184,7 +185,7 @@ export default function Page() {
                 {s.name}
               </button>
             ))}
-            <button className="screen-chip add" onClick={addScreen}>＋</button>
+            <button className="screen-chip add" onClick={addScreen} aria-label={t("action.addScreen")}><Icon name="plus" size={14} /></button>
           </div>
         </aside>
         <Canvas editor={editor} onOpenIcon={(partId, field) => setIconTarget({ partId, field })} />

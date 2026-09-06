@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Icon from "@/components/Icon";
 import { getT } from "@/lib/i18n";
 import { ACCENT_PRESETS } from "@/lib/tokens";
 import { accentHex } from "@/lib/theme";
@@ -22,7 +23,7 @@ export default function ThemePanel({ editor, onClose }: Props) {
     <div className="popover" onPointerDown={(e) => e.stopPropagation()}>
       <div className="popover-head">
         <strong>{t("panel.theme")}</strong>
-        <button className="icon-btn" onClick={onClose}>✕</button>
+        <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="xmark" size={14} /></button>
       </div>
 
       <label className="field">
