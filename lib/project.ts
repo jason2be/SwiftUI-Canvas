@@ -30,7 +30,7 @@ const validPart = (p: unknown): boolean =>
   typeof p.screen === "string" &&
   typeof p.kind === "string" &&
   KINDS.has(p.kind) &&
-  typeof p.label === "string" &&
+  (p.label === undefined || typeof p.label === "string") &&
   finite(p.x) &&
   finite(p.y) &&
   isVariantFor(p.kind, p.variant) &&

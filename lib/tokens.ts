@@ -275,7 +275,7 @@ export function partSize(kind: Kind, part?: Partial<Part>): { w: number; h: numb
     case "segmented":
       return { w: 361, h: 32 };
     case "picker":
-      return { w: 361, h: 60 };
+      return { w: 361, h: 44 };
     case "textField":
       return { w: 361, h: 64 };
     case "searchField":
@@ -293,11 +293,14 @@ export function partSize(kind: Kind, part?: Partial<Part>): { w: number; h: numb
     case "sheet":
       return { w: SCREEN_W, h: part?.h ?? 260 };
     case "progress":
-      return { w: 300, h: part?.variant === "circular" ? 60 : 4 }; // linear bar is 4pt tall
+      return { w: 300, h: part?.variant === "circular" ? 48 : 4 }; // linear bar is 4pt tall, circular ring 48
     case "gauge":
       return { w: 160, h: 120 };
-    case "text":
-      return { w: 300, h: 21 }; // one line of 17pt body
+    case "text": {
+      // one line of the mapped UIFont size at 1.25 line height
+      const size = ({ largeTitle: 34, title: 28, headline: 17, body: 17, callout: 16, footnote: 13, caption: 12 } as Record<string, number>)[variantOf({ kind: "text", variant: part?.variant ?? "body" })];
+      return { w: 300, h: Math.round(1.25 * (size ?? 17)) };
+    }
     case "image":
       return { w: 200, h: 200 };
     case "divider":

@@ -89,7 +89,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             boxShadow: glass ? "0 1px 4px rgba(0,0,0,0.12)" : undefined,
           }}
         >
-          <Icon name={p.icon} size={18} color={prominent ? c.accentText : c.accent} />
+          <Icon name={p.icon} size={20} color={prominent ? c.accentText : c.accent} />
         </div>
       );
     }
@@ -131,7 +131,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
       return (
         <div style={{ width: p.w ?? 300, height: 36, display: "flex", alignItems: "center", position: "relative" }}>
           <div style={{ width: "100%", height: 4, borderRadius: 2, background: dark ? "rgba(120,120,128,0.38)" : "rgba(120,120,128,0.20)", position: "relative" }}>
-            <div style={{ position: "absolute", inset: 0, width: `${v}%`, borderRadius: 2, background: dark ? "rgba(255,255,255,0.9)" : "#fff" }} />
+            <div style={{ position: "absolute", inset: 0, width: `${v}%`, borderRadius: 2, background: c.accent }} />
             <div
               style={{
                 position: "absolute",
@@ -192,17 +192,16 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
     }
 
     case "picker":
+      // iOS menu picker renders as a Form row: label left, value + up/down
+      // chevron right, 44pt tall, no box around it
       return (
         <div
           style={{
             width: p.w ?? 361,
-            height: p.h ?? 60,
-            borderRadius: 10,
-            background: dark ? "rgba(118,118,128,0.24)" : "rgba(118,118,128,0.12)",
+            height: p.h ?? 44,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "0 16px",
             fontFamily: fontStack,
           }}
         >
@@ -247,6 +246,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             background: dark ? "rgba(118,118,128,0.24)" : "rgba(118,118,128,0.12)",
             display: "flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 6,
             padding: "0 10px",
             color: c.secondaryLabel,
@@ -351,11 +351,13 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
                 alignItems: "center",
                 gap: 12,
                 padding: "0 16px",
-                borderTop: i > 0 ? `0.5px solid ${c.separator}` : "none",
+                position: "relative",
                 marginLeft: inset && i > 0 && o.icon ? 16 : 0,
                 paddingLeft: inset && i > 0 && o.icon ? 0 : 16,
               }}
             >
+              {/* iOS separators are inset to the text origin, not full width */}
+              {i > 0 ? <div style={{ position: "absolute", left: inset && o.icon ? 0 : 16, right: 0, top: 0, height: 0.5, background: c.separator }} /> : null}
               {o.icon ? <Icon name={o.icon} size={20} color={c.accent} /> : null}
               <span style={{ fontSize: 17, color: c.label, flex: 1 }}>{o.label}</span>
               <Icon name="chevron.right" size={14} color={c.secondaryLabel} />
@@ -408,7 +410,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
             {p.supporting ? <div style={{ fontSize: 13, color: c.label, marginTop: 5, lineHeight: 1.35 }}>{p.supporting}</div> : null}
           </div>
           <div style={{ borderTop: `0.5px solid ${c.separator}`, display: "flex" }}>
-            {(p.options ?? []).map((o, i, arr) => (
+            {(p.options ?? []).map((o, i) => (
               <div
                 key={i}
                 style={{
@@ -419,7 +421,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
                   justifyContent: "center",
                   fontSize: 17,
                   color: c.accent,
-                  fontWeight: i === arr.length - 1 ? 600 : 400,
+                  fontWeight: i === 0 ? 600 : 400, // iOS bolds the preferred (first/cancel) action
                   borderLeft: i > 0 ? `0.5px solid ${c.separator}` : "none",
                 }}
               >
@@ -450,16 +452,17 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
       );
 
     case "progress": {
-      const v = p.value;
+      // value is 0-100; tolerate 0-1 fractions (agent-authored docs)
+      const ratio = v2pct(p.value, 20);
       if (variantOf(p) === "circular") {
-        const pct = v === undefined ? 0.25 : v / 100;
+        const pct = v2pct(p.value, 25) / 100;
         const R = 20;
         const CIRC = 2 * Math.PI * R;
         return (
           <div style={{ width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width={48} height={48} viewBox="0 0 48 48">
               <circle cx={24} cy={24} r={R} fill="none" stroke={c.fill} strokeWidth={4} />
-              {v !== undefined ? (
+              {p.value !== undefined ? (
                 <circle
                   cx={24}
                   cy={24}
@@ -478,13 +481,13 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
       }
       return (
         <div style={{ width: p.w ?? 300, height: 4, borderRadius: 2, background: c.fill, overflow: "hidden" }}>
-          <div style={{ width: `${v ?? 20}%`, height: "100%", borderRadius: 2, background: c.accent }} />
+          <div style={{ width: `${ratio}%`, height: "100%", borderRadius: 2, background: c.accent }} />
         </div>
       );
     }
 
     case "gauge": {
-      const v = Math.min(100, Math.max(0, p.value ?? 60));
+      const v = Math.round(Math.min(100, Math.max(0, v2pct(p.value, 60))));
       const R = 44;
       const CIRC = Math.PI * R; // half circle
       return (
@@ -507,9 +510,11 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
     }
 
     case "text": {
+      // per UIFont text styles: titles are regular weight; bold is a nav-bar
+      // concern (handled in the navBar case)
       const size = ({ largeTitle: 34, title: 28, headline: 17, body: 17, callout: 16, footnote: 13, caption: 12 } as Record<string, number>)[variantOf(p)] ?? 17;
       const v = variantOf(p);
-      const weight = v === "largeTitle" || v === "title" ? 700 : v === "headline" ? 600 : 400;
+      const weight = v === "headline" ? 600 : 400;
       return (
         <div
           style={{
@@ -569,3 +574,9 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "
 }
 
 const SCREENW = 393;
+
+/** progress/gauge values are 0-100 but agent docs may carry a 0-1 fraction */
+function v2pct(value: number | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
+  return Math.min(100, Math.max(0, value <= 1 ? value * 100 : value));
+}
