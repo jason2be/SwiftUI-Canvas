@@ -57,6 +57,9 @@ export function snapTargetsFor(args: {
   };
   width: (p: { kind: Kind; w?: number }) => number;
   height: (p: { kind: Kind; h?: number }) => number;
+  /** ids of the parts being dragged: their own edges must not be targets,
+   * or the part chases its last committed position */
+  exclude?: string[];
 }): SnapTargets {
   const xs: number[] = [
     0,
@@ -76,6 +79,7 @@ export function snapTargetsFor(args: {
   // content boundaries: below the nav bar, above the tab bar / sheet
   for (const p of args.doc.parts) {
     if (p.screen !== args.screen.id) continue;
+    if (args.exclude?.includes(p.id)) continue;
     if (p.kind === "navBar") ys.push(p.y + (p.h ?? 96));
     if (p.kind === "tabBar" || p.kind === "sheet") ys.push(p.y);
   }
@@ -83,6 +87,7 @@ export function snapTargetsFor(args: {
   const peers: Peer[] = [];
   for (const p of args.doc.parts) {
     if (p.screen !== args.screen.id) continue;
+    if (args.exclude?.includes(p.id)) continue;
     if (p.kind === "navBar" || p.kind === "tabBar") continue;
     const w = args.width(p);
     const h = args.height(p);
@@ -111,7 +116,11 @@ function bestCandidate(offsets: number[], targets: number[], axis: "x" | "y", re
       const dist = Math.abs(delta);
       if (dist > SNAP_RANGE) continue;
       const pull = (1 - dist / SNAP_RANGE) ** PULL_EXP;
-      if (!best || dist < best.dist || (dist === best.dist && pull > best.pull)) {
+      // epsilon: floating-point drift from a previous snap can leave an edge
+      // a hair off a target (276.49999… vs 276.5); without this, a phantom
+      // near-zero pull wins the tie and produces a bogus guide
+      const better = best === null || dist < best.dist - 1e-6 || (dist <= best.dist + 1e-6 && pull > best.pull);
+      if (better) {
         best = { delta, dist, pull, guide: { axis, at: t } };
       }
     }

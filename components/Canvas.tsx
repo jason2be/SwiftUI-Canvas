@@ -186,8 +186,9 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
           doc,
           width: (p) => p.w ?? partSize(p.kind).w,
           height: (p) => p.h ?? partSize(p.kind).h,
+          exclude: d.ids,
         });
-        const peers = targets.peers.filter((p) => !d.ids.includes(p.id ?? ""));
+        const peers = targets.peers;
         const res = computeSnap({ x: nx, y: ny, w, h }, { ...targets, peers });
         nx += res.dx;
         ny += res.dy;
@@ -211,9 +212,11 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
         clearGuides();
       }
 
-      // apply the same magnetic correction to every selected part
-      const corrX = nx - (o.x + dx);
-      const corrY = ny - (o.y + dy);
+      // apply the magnetic correction relative to each part's gridded base,
+      // so the primary part lands exactly on nx/ny and guides coincide with
+      // the rendered position (grid() alone would swallow the correction)
+      const corrX = nx - grid(o.x + dx);
+      const corrY = ny - grid(o.y + dy);
       mutate((doc0) => {
         const parts = doc0.parts.map((p) => {
           if (!d.ids.includes(p.id)) return p;

@@ -35,6 +35,23 @@ describe("snapTargetsFor", () => {
     expect(t.xs).toContain(96); // button center
     expect(t.peers.map((p) => p.id)).toEqual(["btn"]); // bars excluded
   });
+  it("excludes the dragged part's own edges from targets (no self-chasing)", () => {
+    const doc = {
+      screens: [{ id: "s" }],
+      parts: [
+        { id: "moving", screen: "s", kind: "button" as Kind, x: 120, y: 200, w: 160, h: 50 },
+        { id: "still", screen: "s", kind: "button" as Kind, x: 16, y: 320, w: 160, h: 50 },
+      ],
+    };
+    const t = snapTargetsFor({ screen: { id: "s" }, doc, width: widthOf, height: heightOf, exclude: ["moving"] });
+    expect(t.xs).not.toContain(120); // dragged part's left edge
+    expect(t.xs).not.toContain(280); // its right edge
+    expect(t.xs).not.toContain(200); // its center
+    expect(t.ys).not.toContain(200);
+    expect(t.peers.map((p) => p.id)).toEqual(["still"]);
+    // and the still part's lines remain usable
+    expect(t.xs).toContain(16);
+  });
 });
 
 describe("computeSnap", () => {
