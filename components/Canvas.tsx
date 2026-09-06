@@ -437,6 +437,26 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
             const my = (y1 + y2) / 2 - (x2 - x1) * 0.15;
             return <path key={p.id} d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`} fill="none" stroke={pal.accent} strokeWidth={2.5} strokeDasharray="7 5" markerEnd="url(#arrow-head)" opacity={0.85} />;
           })}
+          {doc.parts.map((p) => {
+            // tab items navigate through options[].target; draw their flow too
+            if (p.kind !== "tabBar") return null;
+            const from = doc.screens.find((s) => s.id === p.screen);
+            if (!from) return null;
+            const opts = p.options ?? [];
+            const w = (p.w ?? SCREEN_W) / Math.max(1, opts.length);
+            return opts.map((o, i) => {
+              if (!o.target || o.target === BACK_TARGET) return null;
+              const to = doc.screens.find((s) => s.id === o.target);
+              if (!to) return null;
+              const x1 = from.x + p.x + w * (i + 0.5);
+              const y1 = from.y + p.y + 12;
+              const x2 = to.x + SCREEN_W / 2;
+              const y2 = to.y + SCREEN_H / 2;
+              const mx = (x1 + x2) / 2 + (y2 - y1) * 0.15;
+              const my = (y1 + y2) / 2 - (x2 - x1) * 0.15;
+              return <path key={`${p.id}:${i}`} d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`} fill="none" stroke={pal.accent} strokeWidth={2} strokeDasharray="4 5" markerEnd="url(#arrow-head)" opacity={0.7} />;
+            });
+          })}
         </svg>
       </div>
 

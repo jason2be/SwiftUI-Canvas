@@ -96,6 +96,11 @@ export default function Page() {
         case "P":
           setShowPreview((v) => !v);
           break;
+        case "0": {
+          // fit the canvas view to its content
+          (document.querySelector(".canvas-host") as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(0);
+          break;
+        }
         case "Escape":
           setShowPreview(false);
           setShowPrompt(false);

@@ -1018,6 +1018,18 @@ body {
 .pv-in-cover { animation: pv-in-cover 0.38s ease-out both; z-index: 2; }
 .pv-out-cover { animation: pv-out-cover 0.38s ease-out both; }
 
+/* invisible per-item hit zones over a tab bar in the preview */
+
+.preview-tabzone {
+  position: absolute;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 5;
+}
+
 /* error boundary */
 
 .crash {

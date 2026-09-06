@@ -110,6 +110,34 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
     };
   };
 
+  /* tab items navigate through options[].target; an invisible hit zone is
+   * laid over each item because the tabs render inside SwiftPart */
+  const tabTapsOf = (p: Part) => {
+    if (p.kind !== "tabBar") return null;
+    const opts = p.options ?? [];
+    const w = (p.w ?? 393) / Math.max(1, opts.length);
+    const h = p.h ?? 83;
+    return opts.map((o, i) => {
+      if (!o.target) return null;
+      const go = () => {
+        if (o.target === BACK_TARGET) {
+          if (stack.length > 1) navigate("", "none", true);
+        } else {
+          navigate(o.target!, "none");
+        }
+      };
+      return (
+        <button
+          key={i}
+          aria-label={o.label}
+          className="preview-tabzone"
+          style={{ left: p.x + i * w, top: p.y, width: w, height: h }}
+          onClick={go}
+        />
+      );
+    });
+  };
+
   // which screen sits underneath during a transition
   const underId = anim ? (anim.dir > 0 ? top : stack[stack.length - 2] ?? top) : top;
   const under = screenById(doc, underId) ?? screen;
@@ -141,16 +169,19 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
             {partsOf(doc, under.id).map((p) => {
               const interactive = !anim && under.id === top;
               const tap = interactive ? tapOf(p) : undefined;
+              const tabZones = interactive ? tabTapsOf(p) : null;
               return (
-                <div
-                  key={p.id}
-                  className={`part-wrap preview-part${tap ? " tappable" : ""}`}
-                  style={{ left: p.x, top: p.y, width: p.w ?? 160 }}
-                  onClick={tap}
-                  role={tap ? "button" : undefined}
-                >
-                  <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} lang={lang} />
-                </div>
+                <React.Fragment key={p.id}>
+                  <div
+                    className={`part-wrap preview-part${tap ? " tappable" : ""}`}
+                    style={{ left: p.x, top: p.y, width: p.w ?? 160 }}
+                    onClick={tap}
+                    role={tap ? "button" : undefined}
+                  >
+                    <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} lang={lang} />
+                  </div>
+                  {tabZones}
+                </React.Fragment>
               );
             })}
             {!anim && stack.length > 1 ? (
