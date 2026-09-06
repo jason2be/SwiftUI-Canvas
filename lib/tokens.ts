@@ -352,7 +352,7 @@ export function partSize(kind: Kind, part?: Partial<Part>): { w: number; h: numb
     case "stepper":
       return { w: 220, h: 36 };
     case "datePicker":
-      return p?.variant === "graphical" ? { w: 320, h: 320 } : { w: 240, h: 36 };
+      return part?.variant === "graphical" ? { w: 320, h: 320 } : { w: 240, h: 36 };
     case "secureField":
       return { w: 361, h: 60 };
     case "textEditor":
