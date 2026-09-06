@@ -28,7 +28,7 @@ interface Props {
 const LINKABLE: Part["kind"][] = ["button", "iconButton", "card", "text", "image", "gauge", "box"];
 
 export default function Inspector({ editor, onOpenIcon }: Props) {
-  const { doc, lang, sel, setSel, activeScreen, mutate, beginBatch } = editor;
+  const { doc, lang, sel, setSel, activeScreen, mutate } = editor;
   const t = getT(lang);
   const [tab, setTab] = useState<"inspector" | "layers">("inspector");
 
@@ -59,7 +59,6 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                     title={t("action.forward")}
                     onClick={(e) => {
                       e.stopPropagation();
-                      beginBatch();
                       mutate((d) => {
                         const arr = [...d.parts];
                         const i = arr.findIndex((x) => x.id === p.id);
@@ -76,7 +75,6 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                     title={t("action.backward")}
                     onClick={(e) => {
                       e.stopPropagation();
-                      beginBatch();
                       mutate((d) => {
                         const arr = [...d.parts];
                         const i = arr.findIndex((x) => x.id === p.id);
@@ -271,14 +269,14 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
           </Field>
 
           <div className="pos-row">
-            <NumField label="X" value={part.x} onChange={(v) => patch(part.id, { x: v })} />
-            <NumField label="Y" value={part.y} onChange={(v) => patch(part.id, { y: v })} />
-            <NumField label="W" value={part.w ?? 0} onChange={(v) => patch(part.id, { w: v || undefined })} />
-            <NumField label="H" value={part.h ?? 0} onChange={(v) => patch(part.id, { h: v || undefined })} />
+            <NumField label="X" value={part.x} onChange={(v) => patch(part.id, { x: v })} ph={t("field.auto")} />
+            <NumField label="Y" value={part.y} onChange={(v) => patch(part.id, { y: v })} ph={t("field.auto")} />
+            <NumField label="W" value={part.w ?? 0} onChange={(v) => patch(part.id, { w: v || undefined })} ph={t("field.auto")} />
+            <NumField label="H" value={part.h ?? 0} onChange={(v) => patch(part.id, { h: v || undefined })} ph={t("field.auto")} />
           </div>
 
           <div className="row-btns">
-            <button className="mini" onClick={() => { beginBatch(); mutate((d) => { const np = duplicatePart(part); return { ...d, parts: [...d.parts, np] }; }); setSel([]); }}>
+            <button className="mini" onClick={() => { mutate((d) => { const np = duplicatePart(part); return { ...d, parts: [...d.parts, np] }; }); setSel([]); }}>
               {t("action.duplicate")}
             </button>
             <button className="mini danger" onClick={() => { mutate((d) => ({ ...d, parts: d.parts.filter((p) => p.id !== part.id) })); setSel([]); }}>
@@ -341,14 +339,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function NumField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function NumField({ label, value, onChange, ph }: { label: string; value: number; onChange: (v: number) => void; ph?: string }) {
   return (
     <label className="numfield">
       <span>{label}</span>
       <input
         type="number"
         value={value || ""}
-        placeholder="auto"
+        placeholder={ph ?? "auto"}
         onChange={(e) => onChange(clampN(e.target.value, 0, 4000))}
       />
     </label>

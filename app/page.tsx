@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Canvas, { addScreenAt } from "@/components/Canvas";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import IconPicker from "@/components/IconPicker";
 import Inspector, { type IconField } from "@/components/Inspector";
 import PartsPalette from "@/components/PartsPalette";
@@ -19,7 +20,7 @@ import { tidyScreen } from "@/lib/tidy";
 
 export default function Page() {
   const editor = useEditor();
-  const { doc, lang, mutate, beginBatch, activeScreen, setActiveScreen, sel, setSel, replaceDoc } = editor;
+  const { doc, lang, mutate, activeScreen, setActiveScreen, sel, setSel, replaceDoc } = editor;
   const t = getT(lang);
 
   const [showPreview, setShowPreview] = useState(false);
@@ -43,17 +44,14 @@ export default function Page() {
     if (!screenId) return;
     const count = doc.parts.filter((p) => p.screen === screenId).length;
     const y = Math.min(140 + (count % 8) * 70, 640);
-    beginBatch();
     mutate((d: Doc) => ({ ...d, parts: [...d.parts, defaultPart(d.lang, screenId, kind, MARGIN, y)] }));
   };
 
   const addScreen = () => {
-    beginBatch();
     mutate((d) => addScreenAt(d, lang));
   };
 
   const tidy = () => {
-    beginBatch();
     mutate((d) => {
       const targets = activeScreen ? [activeScreen] : d.screens.map((s) => s.id);
       const byScreen = new Map(targets.map((id) => [id, tidyScreen(d, id)]));
@@ -78,7 +76,6 @@ export default function Page() {
         e.preventDefault();
         const parts = doc.parts.filter((p) => sel.includes(p.id));
         if (parts.length) {
-          beginBatch();
           mutate((d) => ({
             ...d,
             parts: [...d.parts, ...parts.map((p) => ({ ...p, ...{ id: `${p.id}c${Math.random().toString(36).slice(2, 6)}`, x: p.x + 16, y: p.y + 16, options: p.options?.map((o) => ({ ...o })) } }))],
@@ -132,7 +129,7 @@ export default function Page() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [doc, sel, editor, mutate, beginBatch, setSel]);
+  }, [doc, sel, editor, mutate, setSel]);
 
   const pickIcon = (name: string | null) => {
     if (!iconTarget) return;
@@ -161,6 +158,7 @@ export default function Page() {
     : null;
 
   return (
+    <ErrorBoundary>
     <div className="app">
       <Toolbar
         editor={editor}
@@ -195,7 +193,8 @@ export default function Page() {
       ) : null}
       {showPrompt ? <PromptPanel editor={editor} onClose={() => setShowPrompt(false)} /> : null}
       {showPreview ? <Preview editor={editor} startScreen={activeScreen} onExit={() => setShowPreview(false)} /> : null}
-      {iconTarget ? <IconPicker initial={iconInitial} onPick={pickIcon} onClose={() => setIconTarget(null)} /> : null}
+      {iconTarget ? <IconPicker initial={iconInitial} onPick={pickIcon} onClose={() => setIconTarget(null)} lang={lang} /> : null}
     </div>
+    </ErrorBoundary>
   );
 }

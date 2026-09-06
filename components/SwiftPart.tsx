@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import type { Lang } from "@/lib/i18n";
 import type { Palette } from "@/lib/theme";
 import type { Part } from "@/lib/tokens";
 import Icon from "./Icon";
@@ -14,11 +15,13 @@ interface Props {
   palette: Palette;
   capsule: boolean;
   dark: boolean;
+  /** interface language for built-in labels ("Back"); defaults to en */
+  lang?: Lang;
 }
 
 const radius = (capsule: boolean, h: number) => (capsule ? h / 2 : 12);
 
-export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props) {
+export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "en" }: Props) {
   const fontStack = "-apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif";
 
   switch (p.kind) {
@@ -273,7 +276,7 @@ export default function SwiftPart({ part: p, palette: c, capsule, dark }: Props)
             {p.icon ? (
               <>
                 <Icon name={p.icon} size={20} color={c.accent} />
-                <span style={{ fontSize: 17 }}>Back</span>
+                <span style={{ fontSize: 17 }}>{lang === "zh" ? "返回" : "Back"}</span>
               </>
             ) : null}
           </div>

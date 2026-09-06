@@ -38,9 +38,15 @@ export interface Palette {
   chrome: string; // bar backgrounds
 }
 
+const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
 export function accentHex(theme: Theme): string {
   const a = theme.accent;
-  if (a.startsWith("#")) return a;
+  if (HEX_RE.test(a)) {
+    // normalize shorthand #abc → #aabbcc
+    if (a.length === 4) return `#${a[1]}${a[1]}${a[2]}${a[2]}${a[3]}${a[3]}`;
+    return a.toLowerCase();
+  }
   return (theme.scheme === "dark" ? DARK : LIGHT)[a] ?? LIGHT.systemBlue;
 }
 
@@ -77,11 +83,11 @@ export function paletteOf(theme: Theme): Palette {
 
 function isLight(hex: string): boolean {
   const h = hex.replace("#", "");
-  if (h.length < 6) return false;
+  if (h.length !== 6) return false;
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 160;
+  return Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b) && 0.2126 * r + 0.7152 * g + 0.0722 * b > 160;
 }
 
 export const isPresetAccent = (key: string) => ACCENT_PRESETS.some((p) => p.key === key);

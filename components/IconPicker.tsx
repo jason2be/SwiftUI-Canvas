@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { getT, type Lang } from "@/lib/i18n";
 import { searchSymbols, SYMBOLS } from "@/lib/symbols";
 import Icon from "./Icon";
 
@@ -11,20 +12,22 @@ interface Props {
   initial?: string | null;
   onPick: (name: string | null) => void;
   onClose: () => void;
+  lang: Lang;
 }
 
-const CATS: { key: SymbolDefCat; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "common", label: "Common" },
-  { key: "media", label: "Media" },
-  { key: "comms", label: "Comms" },
-  { key: "arrows", label: "Arrows" },
-  { key: "nature", label: "Objects" },
+const CATS: { key: SymbolDefCat; en: string; zh: string }[] = [
+  { key: "all", en: "All", zh: "全部" },
+  { key: "common", en: "Common", zh: "常用" },
+  { key: "media", en: "Media", zh: "媒体" },
+  { key: "comms", en: "Comms", zh: "通信" },
+  { key: "arrows", en: "Arrows", zh: "箭头" },
+  { key: "nature", en: "Objects", zh: "对象" },
 ];
 
 type SymbolDefCat = "all" | "common" | "media" | "comms" | "arrows" | "nature";
 
-export default function IconPicker({ initial, onPick, onClose }: Props) {
+export default function IconPicker({ initial, onPick, onClose, lang }: Props) {
+  const t = getT(lang);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<SymbolDefCat>("all");
   const list = useMemo(() => {
@@ -43,7 +46,7 @@ export default function IconPicker({ initial, onPick, onClose }: Props) {
         </div>
         <div className="seg seg-cats">
           {CATS.map((c) => (
-            <button key={c.key} className={cat === c.key ? "on" : ""} onClick={() => setCat(c.key)}>{c.label}</button>
+            <button key={c.key} className={cat === c.key ? "on" : ""} onClick={() => setCat(c.key)}>{lang === "zh" ? c.zh : c.en}</button>
           ))}
         </div>
         <div className="icon-grid">
@@ -58,11 +61,11 @@ export default function IconPicker({ initial, onPick, onClose }: Props) {
               <span className="icon-cell-name">{s.name}</span>
             </button>
           ))}
-          {list.length === 0 ? <div className="hint">No symbols match “{q}”.</div> : null}
+          {list.length === 0 ? <div className="hint">{t("iconpicker.none").replace("{q}", q)}</div> : null}
         </div>
         <div className="modal-foot">
-          <span className="hint">{SYMBOLS.length} symbols · the prompt always uses the exact name</span>
-          <button className="mini" onClick={() => onPick(null)}>Clear</button>
+          <span className="hint">{t("iconpicker.count").replace("{n}", String(SYMBOLS.length))}</span>
+          <button className="mini" onClick={() => onPick(null)}>{t("iconpicker.clear")}</button>
         </div>
       </div>
     </div>

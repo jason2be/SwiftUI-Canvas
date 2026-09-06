@@ -46,7 +46,7 @@ const MIN_Z = 0.25;
 const MAX_Z = 2.5;
 
 export default function Canvas({ editor, onOpenIcon }: Props) {
-  const { doc, lang, tool, sel, setSel, activeScreen, setActiveScreen, mutate, beginBatch } = editor;
+  const { doc, lang, tool, sel, setSel, activeScreen, setActiveScreen, mutate } = editor;
   const t = getT(lang);
   const pal = paletteOf(doc.theme);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -147,7 +147,6 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       const p = doc.parts.find((pp) => pp.id === id);
       if (p) origins.set(id, { x: p.x, y: p.y });
     }
-    beginBatch();
     drag.current = { mode: "part", ids, sx: e.clientX, sy: e.clientY, origins };
   };
 
@@ -157,7 +156,6 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     setActiveScreen(screen.id);
     setSel([]);
     // drag the whole screen by its empty areas
-    beginBatch();
     drag.current = { mode: "screen", id: screen.id, sx: e.clientX, sy: e.clientY, ox: screen.x, oy: screen.y };
   };
 
@@ -398,7 +396,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
                       if (p.kind === "iconButton" || p.kind === "navBar") onOpenIcon(p.id, p.kind === "navBar" ? "icon2" : "icon");
                     }}
                   >
-                    <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} />
+                    <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} lang={lang} />
                     {p.link ? <span className="part-link-badge">→</span> : null}
                   </div>
                 ))}

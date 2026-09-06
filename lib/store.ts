@@ -1,21 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { HISTORY_CAP, pushEntry, stepRedo, stepUndo } from "./history";
 import { initLang, type Lang } from "./i18n";
+import { isProject } from "./project";
 import { newDoc, type Doc } from "./tokens";
 
 const DOC_KEY = "swiftui-canvas.doc.v1";
 const LANG_KEY = "swiftui-canvas.lang";
-const HISTORY_CAP = 100;
-
-function looksLikeDoc(v: unknown): v is Doc {
-  return typeof v === "object" && v !== null && "screens" in v && "parts" in v && "theme" in v;
-}
 
 function loadDoc(): Doc {
   try {
     const raw = localStorage.getItem(DOC_KEY);
-    if (raw && looksLikeDoc(JSON.parse(raw))) return JSON.parse(raw);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      // the same validation a file or share link goes through
+      if (isProject(parsed)) return parsed;
+    }
   } catch {
     // fall through to a fresh document
   }
@@ -28,8 +29,6 @@ export interface Editor {
   setLang: (lang: Lang) => void;
   /** apply an update; pass `key` to coalesce rapid changes of one gesture/field into one history entry */
   mutate: (fn: (doc: Doc) => Doc, key?: string) => void;
-  /** snapshot the current doc into history before a multi-step gesture */
-  beginBatch: () => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -49,19 +48,24 @@ export function useEditor(): Editor {
   const [tool, setTool] = useState<"select" | "hand">("select");
   const [sel, setSel] = useState<string[]>([]);
   const [activeScreen, setActiveScreen] = useState<string | null>(null);
+  // the authoritative doc; a ref so rapid successive calls (drag moves,
+  // keystrokes) always read the latest state, never a stale closure
+  const docRef = useRef<Doc>(doc);
   const past = useRef<Doc[]>([]);
   const future = useRef<Doc[]>([]);
   const [pastLen, setPastLen] = useState(0);
   const [futureLen, setFutureLen] = useState(0);
+  const lastKey = useRef<{ key: string; t: number } | null>(null);
   const loaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastKey = useRef<{ key: string; t: number } | null>(null);
 
-  // initial load: language preference, then a saved doc or a fresh one
+  // initial load: language preference, then a validated saved doc or a fresh one
   useEffect(() => {
     const stored = (localStorage.getItem(LANG_KEY) as Lang | null) ?? initLang();
     setLangState(stored);
-    setDoc(loadDoc());
+    const loadedDoc = loadDoc();
+    docRef.current = loadedDoc;
+    setDoc(loadedDoc);
     loaded.current = true;
   }, []);
 
@@ -87,70 +91,68 @@ export function useEditor(): Editor {
     }
   }, []);
 
-  const mutate = useCallback((fn: (d: Doc) => Doc, key?: string) => {
-    setDoc((d) => {
+  const commit = useCallback((next: Doc) => {
+    docRef.current = next;
+    setDoc(next);
+  }, []);
+
+  const mutate = useCallback(
+    (fn: (d: Doc) => Doc, key?: string) => {
+      const cur = docRef.current;
       const now = Date.now();
       const coalesce = !!key && lastKey.current?.key === key && now - lastKey.current.t < 800;
-      if (!coalesce) past.current = [...past.current.slice(-HISTORY_CAP), d];
-      lastKey.current = key ? { key, t: now } : null;
+      if (!coalesce) {
+        past.current = pushEntry(past.current, cur);
+        setPastLen(past.current.length);
+      }
       future.current = [];
-      return fn(d);
-    });
-    setPastLen(past.current.length);
-    setFutureLen(0);
-  }, []);
-
-  const beginBatch = useCallback(() => {
-    setDoc((d) => {
-      past.current = [...past.current.slice(-HISTORY_CAP), d];
-      lastKey.current = null;
-      return d;
-    });
-    setPastLen(past.current.length);
-    setFutureLen(0);
-  }, []);
+      setFutureLen(0);
+      lastKey.current = key ? { key, t: now } : null;
+      commit(fn(cur));
+    },
+    [commit]
+  );
 
   const undo = useCallback(() => {
-    setDoc((d) => {
-      const prev = past.current.pop();
-      if (!prev) return d;
-      future.current = [d, ...future.current.slice(0, HISTORY_CAP)];
-      lastKey.current = null;
-      return prev;
-    });
+    const step = stepUndo({ past: past.current, future: future.current }, docRef.current);
+    if (!step) return;
+    past.current = step.book.past;
+    future.current = step.book.future;
+    lastKey.current = null;
     setPastLen(past.current.length);
     setFutureLen(future.current.length);
-  }, []);
+    commit(step.doc);
+  }, [commit]);
 
   const redo = useCallback(() => {
-    setDoc((d) => {
-      const next = future.current.shift();
-      if (!next) return d;
-      past.current = [...past.current, d];
-      lastKey.current = null;
-      return next;
-    });
+    const step = stepRedo({ past: past.current, future: future.current }, docRef.current);
+    if (!step) return;
+    past.current = step.book.past;
+    future.current = step.book.future;
+    lastKey.current = null;
     setPastLen(past.current.length);
     setFutureLen(future.current.length);
-  }, []);
+    commit(step.doc);
+  }, [commit]);
 
-  const replaceDoc = useCallback((next: Doc) => {
-    setDoc((d) => {
-      past.current = [...past.current.slice(-HISTORY_CAP), d];
-      return next;
-    });
-    future.current = [];
-    setSel([]);
-    setPastLen(past.current.length);
-    setFutureLen(0);
-  }, []);
+  const replaceDoc = useCallback(
+    (next: Doc) => {
+      past.current = pushEntry(past.current, docRef.current);
+      future.current = [];
+      lastKey.current = null;
+      setSel([]);
+      setPastLen(past.current.length);
+      setFutureLen(0);
+      commit(next);
+    },
+    [commit]
+  );
 
   return {
     doc,
     lang,
     setLang,
     mutate,
-    beginBatch,
     undo,
     redo,
     canUndo: pastLen > 0,
@@ -164,3 +166,5 @@ export function useEditor(): Editor {
     setActiveScreen,
   };
 }
+
+export { HISTORY_CAP };

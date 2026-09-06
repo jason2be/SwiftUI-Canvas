@@ -967,6 +967,107 @@ body {
   will-change: transform, opacity;
 }
 
+/* preview transitions: keyframes play on mount (the moving layer is keyed) */
+
+@keyframes pv-in-push {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes pv-out-push {
+  from { transform: translateX(0); }
+  to { transform: translateX(30%); }
+}
+
+@keyframes pv-in-zoom {
+  from { transform: scale(0.55); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pv-out-zoom {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(1.12); opacity: 0; }
+}
+
+@keyframes pv-in-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes pv-in-cover {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes pv-out-sheet {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+@keyframes pv-out-cover {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+.pv-in-push { animation: pv-in-push 0.38s cubic-bezier(0.32, 0.72, 0, 1) both; z-index: 2; box-shadow: -12px 0 28px rgba(0, 0, 0, 0.18); }
+.pv-out-push { animation: pv-out-push 0.38s cubic-bezier(0.32, 0.72, 0, 1) both; }
+.pv-in-zoom { animation: pv-in-zoom 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; z-index: 2; }
+.pv-out-zoom { animation: pv-out-zoom 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.pv-in-sheet { animation: pv-in-sheet 0.38s cubic-bezier(0.32, 0.72, 0, 1) both; z-index: 2; }
+.pv-out-sheet { animation: pv-out-sheet 0.38s cubic-bezier(0.32, 0.72, 0, 1) both; }
+.pv-in-cover { animation: pv-in-cover 0.38s ease-out both; z-index: 2; }
+.pv-out-cover { animation: pv-out-cover 0.38s ease-out both; }
+
+/* error boundary */
+
+.crash {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: var(--bg);
+  color: var(--text-1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+
+.crash h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.crash p {
+  color: var(--text-2);
+  max-width: 480px;
+  margin: 0;
+}
+
+.crash pre {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 560px;
+  overflow: auto;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.crash button {
+  background: var(--accent);
+  color: #06111f;
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .preview-back {
   position: absolute;
   left: 50%;
