@@ -72,6 +72,7 @@ A screen is **393 × 852** logical points (iPhone). Place screens side by side o
 - `id`: any unique string. `name`: what the screen is called in the prompt (keep the person's language).
 - `note` (optional): what the screen is for, in a sentence. It goes into the prompt.
 - `bg` (optional): `"system"` (default), `"secondary"`, `"grouped"`, or any `"#rrggbb"` color. It paints the screen behind the parts and goes into the prompt.
+- `chrome` (optional): `true` draws the system status bar (9:41, signal, battery) and the home indicator on the sketch — visual only, never in the prompt. Leave it off unless the person asks for it; keep content below ~59pt from the top either way.
 
 ### Parts
 

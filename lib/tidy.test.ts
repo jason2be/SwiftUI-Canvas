@@ -27,6 +27,14 @@ describe("tidyScreen", () => {
     expect(pos(d, "t").x).toBe(0);
   });
 
+  it("starts bars and body below the status bar when chrome is on", () => {
+    const d2: Doc = { ...doc(part("n", "navBar", 12, 40), part("a", "text", 20, 300, { label: "a" })), screens: [{ id: "s1", name: "A", x: 0, y: 0, chrome: true }] };
+    const r = tidyScreen(d2, "s1")!;
+    expect(pos(r, "n").y).toBe(59); // below the system status bar
+    const a = pos(r, "a");
+    expect(a.y).toBeGreaterThanOrEqual(59 + 44); // body clears navBar under the status bar
+  });
+
   it("stacks lone parts on the left margin from the top with 16pt gaps", () => {
     const d = tidyScreen(
       doc(

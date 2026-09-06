@@ -212,7 +212,14 @@ export interface Screen {
   note?: string;
   /** screen background: a system token or a #hex color; system = default */
   bg?: string;
+  /** system chrome: status bar (9:41, signal, battery) + home indicator;
+   *  undefined keeps legacy screens clean, new screens draw it */
+  chrome?: boolean;
 }
+
+/** safe areas the system chrome occupies: status bar top, home indicator bottom */
+export const CHROME_TOP = 59;
+export const CHROME_BOTTOM = 34;
 
 /** the named screen backgrounds; anything else valid is a #hex color */
 export const SCREEN_BGS = ["system", "secondary", "grouped"] as const;
@@ -307,7 +314,7 @@ export function newDoc(lang: Lang = "en"): Doc {
 }
 
 export function newScreen(lang: Lang, index: number): Screen {
-  return { id: newId(), name: lang === "zh" ? `屏幕 ${index + 1}` : `Screen ${index + 1}`, x: 60, y: 60 };
+  return { id: newId(), name: lang === "zh" ? `屏幕 ${index + 1}` : `Screen ${index + 1}`, x: 60, y: 60, chrome: true };
 }
 
 let idCounter = 0;

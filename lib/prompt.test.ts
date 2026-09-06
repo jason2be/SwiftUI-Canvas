@@ -74,4 +74,12 @@ describe("buildPrompt", () => {
     d.parts.push({ id: "v1", screen: "s2", kind: "text", x: 16, y: 200, label: "visible", variant: "body" });
     expect(buildPrompt(d, { kind: "screen", id: "s2" }, "en")).toContain("visible");
   });
+
+  it("tells the builder to leave room for the system chrome, once", () => {
+    const p = buildPrompt(doc, { kind: "all" }, "zh");
+    expect(p).toContain("系统状态栏");
+    expect(p.split("系统状态栏").length - 1).toBe(1); // mentioned once, in the baseline
+    const pe = buildPrompt(doc, { kind: "all" }, "en");
+    expect(pe).toContain("system status bar");
+  });
 });

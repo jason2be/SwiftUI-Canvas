@@ -53,6 +53,7 @@ const validScreen = (s: unknown): boolean =>
   finite(s.x) &&
   finite(s.y) &&
   (s.note === undefined || typeof s.note === "string") &&
+  (s.chrome === undefined || typeof s.chrome === "boolean") &&
   (s.bg === undefined || (typeof s.bg === "string" && (SCREEN_BGS.includes(s.bg as never) || /^#[0-9a-fA-F]{3,8}$/.test(s.bg))));
 
 const validTheme = (t: unknown): boolean =>

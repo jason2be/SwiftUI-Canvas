@@ -8,7 +8,7 @@
  * at an equal distance between two neighbors. */
 
 import type { CSSProperties } from "react";
-import { MARGIN, SCREEN_H, SCREEN_W, type Kind } from "./tokens";
+import { CHROME_TOP, MARGIN, SCREEN_H, SCREEN_W, type Kind } from "./tokens";
 
 /** how close a line must be before it starts pulling (pt) */
 export const SNAP_RANGE = 7;
@@ -52,7 +52,7 @@ export interface SnapResult {
 export function snapTargetsFor(args: {
   screen: { id: string | null };
   doc: {
-    screens: { id: string }[];
+    screens: { id: string; chrome?: boolean }[];
     parts: { id: string; screen: string | null; kind: Kind; x: number; y: number; w?: number; h?: number }[];
   };
   width: (p: { kind: Kind; w?: number }) => number;
@@ -78,6 +78,8 @@ export function snapTargetsFor(args: {
   ];
 
   // content boundaries: below the nav bar, above the tab bar / sheet
+  const scr = args.screen.id !== null ? args.doc.screens.find((s) => s.id === args.screen.id) : undefined;
+  if (scr?.chrome) ys.push(CHROME_TOP);
   for (const p of args.doc.parts) {
     if (p.screen !== args.screen.id) continue;
     if (args.exclude?.includes(p.id)) continue;

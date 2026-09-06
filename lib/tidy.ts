@@ -1,4 +1,4 @@
-import { MARGIN, SCREEN_H, SCREEN_W, partSize, type Doc, type Part, partsOf } from "./tokens";
+import { CHROME_TOP, MARGIN, SCREEN_H, SCREEN_W, partSize, type Doc, type Part, partsOf } from "./tokens";
 
 /* One tidy pass, after the reference project's tidy:
  *
@@ -25,13 +25,15 @@ const sizeOf = (p: Part) => ({ w: p.w ?? partSize(p.kind, p).w, h: p.h ?? partSi
 export function tidyScreen(doc: Doc, screenId: string): Part[] | null {
   const parts = partsOf(doc, screenId);
   const moved = parts.map((p) => ({ ...p }));
+  // the system status bar owns the top: bars start below it when drawn
+  const chromeTop = doc.screens.find((s) => s.id === screenId)?.chrome ? CHROME_TOP : 0;
 
   // 1. bars anchor to their edges (stacked in order when doubled)
   const topBars = moved.filter((p) => p.kind === "navBar");
   const bottomBars = moved.filter((p) => p.kind === "tabBar" || p.kind === "sheet");
   topBars.forEach((bar, i) => {
     bar.x = 0;
-    bar.y = i === 0 ? 0 : Math.round(bar.h ?? 44) + (i - 1) * (bar.h ?? 44);
+    bar.y = i === 0 ? chromeTop : Math.round(bar.h ?? 44) + (i - 1) * (bar.h ?? 44);
   });
   bottomBars.forEach((bar) => {
     bar.x = 0;
@@ -54,7 +56,8 @@ export function tidyScreen(doc: Doc, screenId: string): Part[] | null {
   for (const row of rows) row.sort((a, b) => a.x - b.x);
 
   const bottomLimit = bottomBars.length > 0 ? Math.min(...bottomBars.map((b) => b.y)) - MARGIN : SCREEN_H - 90;
-  let y = topBars.length > 0 ? 100 : MARGIN;
+  const firstBar = topBars[0];
+  let y = firstBar ? Math.max(100, chromeTop + (firstBar.h ?? 44) + MARGIN) : chromeTop || MARGIN;
   for (const row of rows) {
     const rowH = Math.max(...row.map((p) => sizeOf(p).h));
     const totalW = row.reduce((s, p) => s + sizeOf(p).w, 0) + (row.length - 1) * ROW_ITEM_GAP;

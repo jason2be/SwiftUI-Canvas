@@ -5,6 +5,7 @@ import { getT } from "@/lib/i18n";
 import { paletteOf } from "@/lib/theme";
 import { BACK_TARGET, partsOf, screenBgCss, screenById, type Part, type Transition } from "@/lib/tokens";
 import SwiftPart from "./SwiftPart";
+import { ScreenChrome } from "./ScreenChrome";
 import type { Editor } from "@/lib/store";
 
 /* Tap-through preview: a phone viewport; tappable parts navigate with the
@@ -166,6 +167,7 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
           {/* the screen underneath the transition */}
           <div className="preview-screen" style={{ background: screenBgCss(under.bg, doc.theme.scheme === "dark") }}>
             <div className="screen-island" />
+            <ScreenChrome screen={under} dark={doc.theme.scheme === "dark"} />
             {partsOf(doc, under.id).map((p) => {
               const interactive = !anim && under.id === top;
               const tap = interactive ? tapOf(p) : undefined;
@@ -193,6 +195,7 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
           {anim && mover ? (
             <div key={anim.n} className={`preview-screen ${moverClass}`} style={{ background: screenBgCss(mover.bg, doc.theme.scheme === "dark") }}>
               <div className="screen-island" />
+              <ScreenChrome screen={mover} dark={doc.theme.scheme === "dark"} />
               {partsOf(doc, mover.id).map((p) => (
                 <div key={p.id} className="part-wrap preview-part" style={{ left: p.x, top: p.y, width: p.w ?? 160 }}>
                   <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} lang={lang} />

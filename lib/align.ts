@@ -1,4 +1,4 @@
-import { MARGIN, SCREEN_H, SCREEN_W, partSize, type Part } from "./tokens";
+import { CHROME_TOP, MARGIN, SCREEN_H, SCREEN_W, partSize, type Part } from "./tokens";
 
 /* Alignment system, after the reference project's lib/tidy.ts approach:
  *
@@ -34,9 +34,15 @@ function rectOf(p: Part): Rect {
 
 /** the content box of a screen: inside the layout margins, below nav bars,
  *  above tab bars and sheets — where a lone part should line up */
-export function bodyRect(doc: { parts: Part[] }, screenId: string, except: Set<string> = new Set()): Rect {
+export function bodyRect(
+  doc: { parts: Part[]; screens?: { id: string; chrome?: boolean }[] },
+  screenId: string,
+  except: Set<string> = new Set(),
+): Rect {
   let top = 0;
   let bottom = SCREEN_H;
+  // the system status bar owns the top of the screen when drawn
+  if (doc.screens?.find((s) => s.id === screenId)?.chrome) top = CHROME_TOP;
   for (const p of doc.parts) {
     if (p.screen !== screenId || except.has(p.id)) continue;
     const h = p.h ?? partSize(p.kind, p).h;

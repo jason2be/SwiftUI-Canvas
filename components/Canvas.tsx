@@ -18,6 +18,7 @@ import {
 } from "@/lib/tokens";
 import SwiftPart from "./SwiftPart";
 import Icon from "./Icon";
+import { ScreenChrome } from "./ScreenChrome";
 import type { IconField } from "./Inspector";
 import type { Editor } from "@/lib/store";
 import {
@@ -450,6 +451,8 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
               >
                 {/* dynamic island */}
                 <div className="screen-island" style={{ background: doc.theme.scheme === "dark" ? "#000" : "#000" }} />
+                {/* system chrome: status bar + home indicator */}
+                <ScreenChrome screen={screen} dark={doc.theme.scheme === "dark"} />
                 {parts.map((p) => (
                   <div
                     key={p.id}

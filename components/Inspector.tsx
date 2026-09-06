@@ -360,7 +360,17 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                     </label>
                   </div>
                 </Field>
-                <Field label={t("screen.note")}>
+                <Field label={t("field.chrome")}>
+                <div className="seg">
+                  <button className={!s.chrome ? "on" : ""} onClick={() => mutate((d) => ({ ...d, screens: d.screens.map((x) => (x.id === s.id ? { ...x, chrome: undefined } : x)) }), `sbg:${s.id}`)}>
+                    {t("field.off")}
+                  </button>
+                  <button className={s.chrome ? "on" : ""} onClick={() => mutate((d) => ({ ...d, screens: d.screens.map((x) => (x.id === s.id ? { ...x, chrome: true } : x)) }), `sbg:${s.id}`)}>
+                    {t("field.on")}
+                  </button>
+                </div>
+              </Field>
+              <Field label={t("screen.note")}>
                   <textarea
                     rows={3}
                     value={s.note ?? ""}

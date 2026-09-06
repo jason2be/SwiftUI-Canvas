@@ -348,6 +348,42 @@ body {
   cursor: pointer;
 }
 
+/* system chrome drawn from the screen's own flag: status bar + home indicator */
+.screen-chrome {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.chrome-time {
+  position: absolute;
+  top: 17px;
+  left: 42px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chrome-status {
+  position: absolute;
+  top: 19px;
+  right: 24px;
+}
+
+.chrome-home {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 5px;
+  border-radius: 3px;
+  background: currentColor;
+  opacity: 0.9;
+}
+
 /* canvas-level parts live on the workspace, outside any screen */
 .canvas-part {
   z-index: 1;
