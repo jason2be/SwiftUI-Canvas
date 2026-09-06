@@ -18,7 +18,7 @@ To make the link:
 import { readFileSync } from "node:fs";
 import { deflateRawSync } from "node:zlib";
 const json = readFileSync(process.argv[2], "utf8");
-console.log("<app-url>#sw=" + deflateRawSync(json).toString("base64url"));
+console.log("https://jason2be.github.io/SwiftUI-Canvas/#sw=" + deflateRawSync(json).toString("base64url"));
 ```
 
 ```python
@@ -27,14 +27,14 @@ import sys, zlib, base64
 data = open(sys.argv[1], "rb").read()
 c = zlib.compressobj(9, zlib.DEFLATED, -15)          # raw deflate, no header
 raw = c.compress(data) + c.flush()
-print("<app-url>#sw=" + base64.urlsafe_b64encode(raw).decode().rstrip("="))
+print("https://jason2be.github.io/SwiftUI-Canvas/#sw=" + base64.urlsafe_b64encode(raw).decode().rstrip("="))
 ```
 
 The link is long (a few thousand characters for a few screens). That is expected; it carries the whole design and nothing is stored anywhere.
 
-> `<app-url>` above is `https://jason2be.github.io/SwiftUI-Canvas` for the
-> hosted deployment. If you are developing locally, use
-> `http://localhost:3000` instead; if self-hosting, use your own origin.
+> The samples above use the hosted deployment
+> (`https://jason2be.github.io/SwiftUI-Canvas`). Developing locally, use
+> `http://localhost:3000` instead; self-hosting, use your own origin.
 
 Rough placement is fine. The person presses **Tidy** and bars snap to the edges while the rest stacks on 16pt margins. Spend your effort on the right parts, sensible labels, and the navigation between screens.
 
