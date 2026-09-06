@@ -95,7 +95,8 @@ Bars: put a `navBar` at `0,0` (96 tall when `large`, 54 when `inline`) and a `ta
 Fields any part may carry:
 
 - `note`: what the part does, in your words. It goes into the prompt verbatim — say what happens on tap, what is saved, what is validated.
-- `link`: `{ "target": "<screen id>" | "back", "transition": "push" | "zoom" | "sheet" | "cover" | "none" }`, the screen a tap opens. `zoom` is the iOS 26 zoom navigation transition.
+- `link`: `{ "target": "<screen id>" | "back", "transition": "push" | "zoom" | "sheet" | "cover" | "none" }`, the screen a tap opens. `zoom` is the iOS 26 zoom navigation transition; use it from the control the user actually taps.
+- `presents`: id of an `alert` or `sheet` part on the same screen; the control opens it as a modal instead of navigating. Alerts and sheets are content, not screens.
 - `w`/`h`: size overrides; heights below are what the canvas draws when omitted.
 
 ### Kinds
@@ -122,6 +123,18 @@ Fields any part may carry:
 | `image` | image placeholder | `icon`, `w`, `h` | 200 × 200 |
 | `divider` | Divider | | 361 × 1 |
 | `box` | rounded container | `variant` `background` / `secondary` / `tertiary`, `w`, `h` | 361 × 220 |
+| `menu` | Menu (long-press / tap menu) | `options` `{label, icon}`, `link`, `note` | 160 × 50 |
+| `stepper` | Stepper | `value`, `label` | 220 × 36 |
+| `datePicker` | DatePicker | `variant` `compact` / `graphical`, `label` | 240 × 36 |
+| `secureField` | SecureField | `label`, `supporting` placeholder | 361 × 60 |
+| `textEditor` | TextEditor | `supporting` placeholder, `w`, `h` | 280 × 120 |
+| `shareLink` | ShareLink | `label`, `icon` | 160 × 50 |
+| `link` | Link | `label` | 120 × 25 |
+| `contentUnavailable` | ContentUnavailableView | `label`, `supporting`, `icon` | 361 × 200 |
+| `disclosure` | DisclosureGroup | `options` (rows), `label` | 361 × 44 |
+| `labeledContent` | LabeledContent | `label`, `supporting` value | 361 × 44 |
+| `map` | Map placeholder | | 361 × 200 |
+| `chart` | static Chart | `variant` `bar` / `line` | 361 × 200 |
 
 Button and icon button variants: `bordered`, `borderedProminent`, `gray`, `plain`, `glass`, `glassProminent`. The `glass` variants stand for the iOS 26 Liquid Glass button styles.
 

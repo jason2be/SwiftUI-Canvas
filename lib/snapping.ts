@@ -7,7 +7,6 @@
  * while the drag lasts. Cross-axis guides appear when the dragged part sits
  * at an equal distance between two neighbors. */
 
-import type { CSSProperties } from "react";
 import { CHROME_TOP, MARGIN, SCREEN_H, SCREEN_W, type Kind } from "./tokens";
 
 /** how close a line must be before it starts pulling (pt) */
@@ -211,13 +210,4 @@ export function guidesBetween(
     to,
   });
   return lines;
-}
-
-/** screen-coordinate position for CSS placement */
-export function guideToStyle(line: GuideLine, screen: { x: number; y: number }): CSSProperties {
-  void screen;
-  if (line.axis === "x") {
-    return { left: line.at - 1, top: line.from, width: 2, height: line.to - line.from };
-  }
-  return { left: line.from, top: line.at - 1, width: line.to - line.from, height: 2 };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Canvas, { addScreenAt } from "@/components/Canvas";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import IconPicker from "@/components/IconPicker";
@@ -12,9 +12,10 @@ import PromptPanel from "@/components/PromptPanel";
 import ThemePanel from "@/components/ThemePanel";
 import Toolbar from "@/components/Toolbar";
 import { getT } from "@/lib/i18n";
+import { mergeDoc } from "@/lib/project";
 import { readShareLink } from "@/lib/share";
 import { useEditor } from "@/lib/store";
-import { MARGIN, defaultPart, type Doc, type Kind } from "@/lib/tokens";
+import { MARGIN, SCREEN_H, CHROME_TOP, defaultPart, duplicateScreen, partSize, type Doc, type Kind, type Part } from "@/lib/tokens";
 import { tidyScreen } from "@/lib/tidy";
 
 /* The editor page: toolbar, palette, canvas, inspector, modals, shortcuts. */
@@ -28,28 +29,73 @@ export default function Page() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
   const [iconTarget, setIconTarget] = useState<{ partId: string; field: IconField } | null>(null);
+  const [notices, setNotices] = useState<string[]>([]);
+  // internal part clipboard for ⌘C/⌘X/⌘V (the OS clipboard is not ours to write)
+  const clipboard = useRef<Part[]>([]);
+  // canvas placement routine, shared with the palette's touch fallback
+  const placeRef = useRef<((kind: Kind, clientX: number, clientY: number) => void) | null>(null);
+  const [shareCandidate, setShareCandidate] = useState<Doc | null>(null);
 
-  // open a shared link once on load, then clean the address bar
+  // open a shared link once on load, then clean the address bar; ask before
+  // clobbering a local draft, offer to keep both instead
   useEffect(() => {
+    const stored = localStorage.getItem("swiftui-canvas.doc.v1");
+    const warnings = editor.takeLoadWarnings();
+    if (warnings.length) setNotices(warnings);
     readShareLink().then((shared) => {
-      if (shared) {
-        replaceDoc(shared);
-        history.replaceState(null, "", location.pathname + location.search);
-      }
+      if (!shared) return;
+      history.replaceState(null, "", location.pathname + location.search);
+      if (stored) setShareCandidate(shared);
+      else replaceDoc(shared);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openShared = (mode: "replace" | "copy") => {
+    const shared = shareCandidate;
+    setShareCandidate(null);
+    if (!shared) return;
+    if (mode === "replace") {
+      replaceDoc(shared);
+    } else {
+      const yOffset = Math.max(0, ...doc.screens.map((s) => s.y)) + SCREEN_H + 120;
+      const shifted: Doc = { ...shared, screens: shared.screens.map((s) => ({ ...s, y: s.y + yOffset })) };
+      mutate((d) => mergeDoc(shifted, d));
+      setActiveScreen(shared.screens[0]?.id ?? null);
+    }
+  };
+
   const addPart = (kind: Kind) => {
     const screenId = activeScreen ?? doc.screens[0]?.id;
     if (!screenId) return;
-    const count = doc.parts.filter((p) => p.screen === screenId).length;
-    const y = Math.min(140 + (count % 8) * 70, 640);
+    const screen = doc.screens.find((s) => s.id === screenId);
+    const existing = doc.parts.filter((p) => p.screen === screenId);
+    const chromeTop = screen?.chrome ? CHROME_TOP : 0;
+    const hasBar = existing.some((p) => p.kind === "navBar");
+    // place below the last part's bottom (bars own the top), so a click-to-add
+    // never stacks onto an earlier part
+    const bottom = existing.reduce((m, p) => Math.max(m, p.y + (p.h ?? partSize(p.kind, p).h)), hasBar ? chromeTop + 96 : chromeTop);
+    const y = Math.min(bottom + 8, SCREEN_H - 140);
     mutate((d: Doc) => ({ ...d, parts: [...d.parts, defaultPart(d.lang, screenId, kind, MARGIN, y)] }));
   };
 
   const addScreen = () => {
     mutate((d) => addScreenAt(d, lang));
+  };
+
+  const dupeScreen = (screenId: string) => {
+    mutate((d) => duplicateScreen(d, screenId));
+  };
+
+  const moveScreen = (screenId: string, dir: -1 | 1) => {
+    mutate((d) => {
+      const i = d.screens.findIndex((s) => s.id === screenId);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= d.screens.length) return d;
+      const screens = [...d.screens];
+      [screens[i], screens[j]] = [screens[j], screens[i]];
+      return { ...d, screens };
+    }, `smove:${screenId}`);
   };
 
   const tidy = () => {
@@ -61,6 +107,11 @@ export default function Page() {
     });
   };
 
+  // keep <html lang> in step with the interface language
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   // global shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -71,6 +122,43 @@ export default function Page() {
         e.preventDefault();
         if (e.shiftKey) editor.redo();
         else editor.undo();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "c") {
+        // clipboard lives in a ref (a ref, not state, so rapid copy/paste works)
+        const parts = doc.parts.filter((p) => sel.includes(p.id));
+        if (parts.length) clipboard.current = parts;
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "x") {
+        const parts = doc.parts.filter((p) => sel.includes(p.id));
+        if (parts.length) {
+          clipboard.current = parts;
+          mutate((d) => ({ ...d, parts: d.parts.filter((p) => !sel.includes(p.id)) }));
+          setSel([]);
+        }
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "v") {
+        const copied = clipboard.current;
+        if (!copied.length) return;
+        e.preventDefault();
+        // paste beside the copies, onto the active screen when pasting there
+        const active = activeScreen ?? copied[0].screen;
+        mutate((d) => {
+          const pasted = copied.map((p) => ({
+            ...p,
+            id: `${p.id}p${Math.random().toString(36).slice(2, 6)}`,
+            screen: active !== null && p.screen !== null ? active : p.screen,
+            options: p.options?.map((o) => ({ ...o })),
+          }));
+          return { ...d, parts: [...d.parts, ...pasted] };
+        });
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        setSel(doc.parts.filter((p) => (activeScreen ? p.screen === activeScreen : p.screen === null)).map((p) => p.id));
         return;
       }
       if (mod && e.key.toLowerCase() === "d") {
@@ -175,22 +263,49 @@ export default function Page() {
         onPreview={() => setShowPreview(true)}
         onPrompt={() => setShowPrompt(true)}
         onTheme={() => setShowTheme((v) => !v)}
+        onLoaded={(warnings) => setNotices(warnings)}
       />
+      {notices.length > 0 && (
+        <div className="notices" role="status">
+          <span>{notices.join(" · ")}</span>
+          <button onClick={() => setNotices([])} aria-label={t("action.close")}>✕</button>
+        </div>
+      )}
+      {shareCandidate && (
+        <div className="overlay" onPointerDown={(e) => e.target === e.currentTarget && setShareCandidate(null)}>
+          <div className="modal">
+            <div className="modal-head"><strong>{t("share.openTitle")}</strong></div>
+            <p className="modal-p">{t("share.openBody")}</p>
+            <div className="row-btns">
+              <button className="mini" onClick={() => openShared("copy")}>{t("share.openCopy")}</button>
+              <button className="mini" onClick={() => openShared("replace")}>{t("share.openReplace")}</button>
+              <button className="mini danger" onClick={() => setShareCandidate(null)}>{t("action.cancel")}</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="main">
         <aside className="left">
           <div className="panel-title">{t("panel.parts")}</div>
-          <PartsPalette editor={editor} onAdd={addPart} />
+          <PartsPalette editor={editor} onAdd={addPart} placeRef={placeRef} />
           <div className="screens-strip">
             <div className="panel-title">{t("canvas.screenLabel")}</div>
-            {doc.screens.map((s) => (
-              <button key={s.id} className={`screen-chip${activeScreen === s.id ? " on" : ""}`} onClick={() => setActiveScreen(s.id)}>
-                {s.name}
-              </button>
+            {doc.screens.map((s, i) => (
+              <span key={s.id} className="screen-chip-wrap">
+                <button className={`screen-chip${activeScreen === s.id ? " on" : ""}`} onClick={() => setActiveScreen(s.id)} title={t("field.screen")}>
+                  {s.name}
+                </button>
+                <span className="chip-tools">
+                  <button onClick={() => moveScreen(s.id, -1)} disabled={i === 0} aria-label={t("action.moveUp")}>↑</button>
+                  <button onClick={() => moveScreen(s.id, 1)} disabled={i === doc.screens.length - 1} aria-label={t("action.moveDown")}>↓</button>
+                  <button onClick={() => dupeScreen(s.id)} aria-label={t("action.duplicateScreen")}><Icon name="plus.rectangle.on.rectangle" size={12} /></button>
+                </span>
+              </span>
             ))}
             <button className="screen-chip add" onClick={addScreen} aria-label={t("action.addScreen")}><Icon name="plus" size={14} /></button>
           </div>
         </aside>
-        <Canvas editor={editor} onOpenIcon={(partId, field) => setIconTarget({ partId, field })} />
+        <Canvas editor={editor} onOpenIcon={(partId, field) => setIconTarget({ partId, field })} placeRef={placeRef} />
         <Inspector editor={editor} onOpenIcon={(partId, field) => setIconTarget({ partId, field })} />
       </div>
 

@@ -60,7 +60,7 @@ export default function PromptPanel({ editor, onClose }: Props) {
           <button className="mini primary" onClick={copy}>{copied ? t("action.copied") : t("action.copy")}</button>
           <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="xmark" size={14} /></button>
         </div>
-        <textarea className="prompt-text" readOnly value={text} spellCheck={false} />
+        <textarea className="prompt-text" readOnly value={text} spellCheck={false} placeholder={text ? undefined : t("prompt.empty")} />
         <div className="modal-foot">
           <span className="hint">{t("prompt.hint")}</span>
         </div>

@@ -3,24 +3,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HISTORY_CAP, pushEntry, stepRedo, stepUndo } from "./history";
 import { initLang, type Lang } from "./i18n";
-import { isProject } from "./project";
+import { isProject, validateDoc } from "./project";
 import { newDoc, type Doc } from "./tokens";
 
 const DOC_KEY = "swiftui-canvas.doc.v1";
 const LANG_KEY = "swiftui-canvas.lang";
 
-function loadDoc(): Doc {
+export interface LoadResult {
+  doc: Doc;
+  /** what the tolerant loader repaired or dropped, for the user to see */
+  warnings: string[];
+}
+
+function loadDoc(): LoadResult {
   try {
     const raw = localStorage.getItem(DOC_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       // the same validation a file or share link goes through
-      if (isProject(parsed)) return parsed;
+      if (isProject(parsed)) return { doc: parsed, warnings: [] };
+      const v = validateDoc(parsed, "Saved design");
+      if (v.doc) return { doc: v.doc, warnings: v.warnings };
     }
   } catch {
     // fall through to a fresh document
   }
-  return newDoc(initLang());
+  return { doc: newDoc(initLang()), warnings: [] };
 }
 
 export interface Editor {
@@ -40,6 +48,8 @@ export interface Editor {
   setSel: (ids: string[]) => void;
   activeScreen: string | null;
   setActiveScreen: (id: string | null) => void;
+  /** warnings from the last tolerant load; read once on mount */
+  takeLoadWarnings: () => string[];
 }
 
 export function useEditor(): Editor {
@@ -57,15 +67,17 @@ export function useEditor(): Editor {
   const [futureLen, setFutureLen] = useState(0);
   const lastKey = useRef<{ key: string; t: number } | null>(null);
   const loaded = useRef(false);
+  const loadWarnings = useRef<string[]>([]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // initial load: language preference, then a validated saved doc or a fresh one
   useEffect(() => {
     const stored = (localStorage.getItem(LANG_KEY) as Lang | null) ?? initLang();
     setLangState(stored);
-    const loadedDoc = loadDoc();
+    const { doc: loadedDoc, warnings } = loadDoc();
     docRef.current = loadedDoc;
     setDoc(loadedDoc);
+    if (warnings.length) loadWarnings.current = warnings;
     loaded.current = true;
   }, []);
 
@@ -164,6 +176,12 @@ export function useEditor(): Editor {
     setSel,
     activeScreen,
     setActiveScreen,
+    /** warnings from the last tolerant load; read once on mount */
+    takeLoadWarnings: () => {
+      const w = loadWarnings.current;
+      loadWarnings.current = [];
+      return w;
+    },
   };
 }
 

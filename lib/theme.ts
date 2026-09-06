@@ -36,6 +36,8 @@ export interface Palette {
   separator: string;
   fill: string;
   chrome: string; // bar backgrounds
+  /** the theme's font design as a CSS stack, so the canvas matches the brief */
+  font: string;
 }
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -50,10 +52,23 @@ export function accentHex(theme: Theme): string {
   return (theme.scheme === "dark" ? DARK : LIGHT)[a] ?? LIGHT.systemBlue;
 }
 
+const SYSTEM_FONT = "-apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif";
+
+/** the CSS font stack for a theme's font design, matching the SwiftUI brief */
+const fontStack = (font: Theme["font"]): string =>
+  font === "rounded"
+    ? `ui-rounded, 'SF Pro Rounded', ${SYSTEM_FONT}`
+    : font === "serif"
+      ? `ui-serif, 'New York', Georgia, 'Times New Roman', serif`
+      : font === "monospaced"
+        ? `ui-monospace, 'SF Mono', Menlo, 'Courier New', monospace`
+        : SYSTEM_FONT;
+
 export function paletteOf(theme: Theme): Palette {
   const dark = theme.scheme === "dark";
   const accent = accentHex(theme);
   const onAccent = isLight(accent) ? "#000000" : "#FFFFFF";
+  const font = fontStack(theme.font);
   return dark
     ? {
         accent,
@@ -66,6 +81,7 @@ export function paletteOf(theme: Theme): Palette {
         separator: "#38383A",
         fill: "#2C2C2E",
         chrome: "rgba(30,30,30,0.85)",
+        font,
       }
     : {
         accent,
@@ -78,6 +94,7 @@ export function paletteOf(theme: Theme): Palette {
         separator: "#C6C6C8",
         fill: "#D1D1D6",
         chrome: "rgba(249,249,249,0.85)",
+        font,
       };
 }
 

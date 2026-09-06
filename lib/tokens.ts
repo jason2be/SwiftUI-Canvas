@@ -202,6 +202,9 @@ export interface Part {
   h?: number;
   note?: string;
   link?: Link;
+  /** presentation trigger: id of an alert/sheet part on the same screen that
+   *  this control presents modally when tapped */
+  presents?: string;
 }
 
 export interface Screen {
@@ -315,6 +318,53 @@ export function newDoc(lang: Lang = "en"): Doc {
 
 export function newScreen(lang: Lang, index: number): Screen {
   return { id: newId(), name: lang === "zh" ? `屏幕 ${index + 1}` : `Screen ${index + 1}`, x: 60, y: 60, chrome: true };
+}
+
+/** clone a screen with all of its parts beside it: new ids everywhere, links
+ *  that pointed at the original now point at the copy, placed to its right */
+export function duplicateScreen(doc: Doc, screenId: string): Doc {
+  const src = doc.screens.find((s) => s.id === screenId);
+  if (!src) return doc;
+  const screenCopyId = newId();
+  const screens = [
+    ...doc.screens,
+    {
+      ...src,
+      id: screenCopyId,
+      name: doc.lang === "zh" ? `${src.name} 副本` : `${src.name} copy`,
+      x: src.x + SCREEN_W + 120,
+    },
+  ];
+  const retarget = (t: string) => (t === screenId ? screenCopyId : t);
+  const idOfOld = new Map<string, string>();
+
+  // originals first, untouched except for inbound links that must lead to the copy
+  const parts: Doc["parts"] = doc.parts.map((p) => {
+    if (p.link?.target === screenId) return { ...p, link: { ...p.link, target: screenCopyId } };
+    if (p.options?.some((o) => o.target === screenId)) {
+      return { ...p, options: p.options.map((o) => ({ ...o, target: o.target === screenId ? screenCopyId : o.target })) };
+    }
+    return p;
+  });
+
+  // then the copies: fresh ids, same content, links that left the original
+  // now leave the copy the same way; presents points at the copied alert
+  for (const old of doc.parts) {
+    if (old.screen !== screenId) continue;
+    idOfOld.set(old.id, newId());
+  }
+  for (const old of doc.parts) {
+    if (old.screen !== screenId) continue;
+    parts.push({
+      ...old,
+      id: idOfOld.get(old.id)!,
+      screen: screenCopyId,
+      link: old.link ? { ...old.link, target: retarget(old.link.target) } : undefined,
+      options: old.options?.map((o) => ({ ...o, target: o.target ? retarget(o.target) : null })),
+      presents: old.presents ? idOfOld.get(old.presents) : undefined,
+    });
+  }
+  return { ...doc, screens, parts };
 }
 
 let idCounter = 0;

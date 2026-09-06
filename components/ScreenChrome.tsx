@@ -24,5 +24,3 @@ export function ScreenChrome({ screen, dark }: { screen: Screen; dark: boolean }
     </div>
   );
 }
-
-export const CHROME_TOP_PX = CHROME_TOP;

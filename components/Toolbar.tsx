@@ -3,7 +3,7 @@
 import React, { useRef, useState } from "react";
 import { getT } from "@/lib/i18n";
 import Icon from "@/components/Icon";
-import { readProject, saveProject } from "@/lib/project";
+import { readProject, saveProject, validateDoc } from "@/lib/project";
 import { shareLink } from "@/lib/share";
 import type { Editor } from "@/lib/store";
 
@@ -16,9 +16,11 @@ interface Props {
   onPreview: () => void;
   onPrompt: () => void;
   onTheme: () => void;
+  /** called when a file load repairs or drops something, to surface why */
+  onLoaded?: (warnings: string[]) => void;
 }
 
-export default function Toolbar({ editor, onAddScreen, onTidy, onPreview, onPrompt, onTheme }: Props) {
+export default function Toolbar({ editor, onAddScreen, onTidy, onPreview, onPrompt, onTheme, onLoaded }: Props) {
   const { doc, lang, setLang, undo, redo, canUndo, canRedo, replaceDoc } = editor;
   const t = getT(lang);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -35,16 +37,33 @@ export default function Toolbar({ editor, onAddScreen, onTidy, onPreview, onProm
       await navigator.clipboard.writeText(link);
       flash(t("shared.copied"));
     } catch {
-      flash(link);
+      setManualLink(link); // clipboard blocked; show the link to copy by hand
     }
   };
+
+  const [manualLink, setManualLink] = useState<string | null>(null);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const next = await readProject(f);
-    if (next) replaceDoc(next);
-    else flash(lang === "zh" ? "无法识别的文件" : "Unrecognized file");
+    if (next) {
+      replaceDoc(next);
+      onLoaded?.([]);
+    } else {
+      // try the tolerant path before giving up
+      try {
+        const v = validateDoc(JSON.parse(await f.text()), "File");
+        if (v.doc) {
+          replaceDoc(v.doc);
+          onLoaded?.(v.warnings);
+        } else {
+          flash(lang === "zh" ? v.errors.join("；") : v.errors.join("; "));
+        }
+      } catch {
+        flash(lang === "zh" ? "无法识别的文件" : "Unrecognized file");
+      }
+    }
     e.target.value = "";
   };
 
@@ -99,6 +118,18 @@ export default function Toolbar({ editor, onAddScreen, onTidy, onPreview, onProm
       </div>
 
       {toast ? <div className="toast">{toast}</div> : null}
+      {manualLink ? (
+        <div className="overlay" onPointerDown={(e) => e.target === e.currentTarget && setManualLink(null)}>
+          <div className="modal">
+            <div className="modal-head"><strong>{t("share.manualTitle")}</strong></div>
+            <p className="modal-p">{t("share.manualBody")}</p>
+            <textarea className="prompt-text share-link" readOnly value={manualLink} onFocus={(e) => e.currentTarget.select()} rows={4} />
+            <div className="row-btns">
+              <button className="mini primary" onClick={() => setManualLink(null)}>{t("action.close")}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

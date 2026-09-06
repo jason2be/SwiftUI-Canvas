@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { getT } from "@/lib/i18n";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getT, KIND_TEXT } from "@/lib/i18n";
 import { paletteOf } from "@/lib/theme";
 import {
   BACK_TARGET,
@@ -35,6 +35,8 @@ import { partSize, MARGIN, screenBgCss } from "@/lib/tokens";
 interface Props {
   editor: Editor;
   onOpenIcon: (partId: string, field: IconField) => void;
+  /** exposed so the palette can place a part from pointer events (touch has no HTML5 drag) */
+  placeRef?: React.MutableRefObject<((kind: Kind, clientX: number, clientY: number) => void) | null>;
 }
 
 interface View {
@@ -46,10 +48,10 @@ interface View {
 const MIN_Z = 0.25;
 const MAX_Z = 2.5;
 
-export default function Canvas({ editor, onOpenIcon }: Props) {
+export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
   const { doc, lang, tool, sel, setSel, activeScreen, setActiveScreen, mutate } = editor;
   const t = getT(lang);
-  const pal = paletteOf(doc.theme);
+  const pal = useMemo(() => paletteOf(doc.theme), [doc.theme]);
   const hostRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>({ x: 60, y: 60, z: 0.7 });
   const viewRef = useRef(view);
@@ -61,6 +63,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     | { mode: "pan"; sx: number; sy: number; vx: number; vy: number }
     | { mode: "part"; ids: string[]; sx: number; sy: number; space: { id: string } | { id: null }; origins: Map<string, { x: number; y: number }> }
     | { mode: "screen"; id: string; sx: number; sy: number; ox: number; oy: number }
+    | { mode: "marquee"; sx: number; sy: number; add: boolean; base: string[] }
     | null
   >(null);
 
@@ -129,8 +132,16 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       startPan(e);
       return;
     }
-    setSel([]);
-    setActiveScreen(null);
+    // select-tool drag over the workspace starts a marquee; on a screen it
+    // just clears (the screen has its own click semantics)
+    if (e.currentTarget === e.target) {
+      const pt = toDoc(e.clientX, e.clientY);
+      drag.current = { mode: "marquee", sx: pt.x, sy: pt.y, add: e.shiftKey, base: e.shiftKey ? sel : [] };
+      setMarqueeRect({ x: pt.x, y: pt.y, w: 0, h: 0 });
+    } else {
+      setSel([]);
+      setActiveScreen(null);
+    }
   };
 
   const onPartDown = (e: React.PointerEvent, part: Part) => {
@@ -153,6 +164,9 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
     drag.current = { mode: "part", ids, space: { id: part.screen }, sx: e.clientX, sy: e.clientY, origins };
   };
 
+  // marquee selection over the workspace (canvas-level parts only)
+  const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
   const onScreenDown = (e: React.PointerEvent, screen: Screen) => {
     if (tool === "hand" || space) return;
     e.stopPropagation();
@@ -165,6 +179,17 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
   const onPointerMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d) return;
+    if (d.mode === "marquee") {
+      const pt = toDoc(e.clientX, e.clientY);
+      const x = Math.min(d.sx, pt.x);
+      const y = Math.min(d.sy, pt.y);
+      const w = Math.abs(pt.x - d.sx);
+      const h = Math.abs(pt.y - d.sy);
+      setMarqueeRect({ x, y, w, h });
+      const inside = doc.parts.filter((p) => p.screen === null && p.x >= x && p.y >= y && p.x + (p.w ?? partSize(p.kind, p).w) <= x + w && p.y + (p.h ?? partSize(p.kind, p).h) <= y + h).map((p) => p.id);
+      setSel([...d.base, ...inside.filter((id) => !d.base.includes(id))]);
+      return;
+    }
     if (d.mode === "pan") {
       setView((v) => ({ ...v, x: d.vx + (e.clientX - d.sx), y: d.vy + (e.clientY - d.sy) }));
     } else if (d.mode === "part") {
@@ -184,11 +209,14 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       if (desired !== d.space.id) {
         const from = doc.screens.find((s) => s.id === d.space.id);
         if (d.space.id !== null && from) {
-          // screen → workspace: world coordinates, rebased on the committed spots
+          // screen → workspace: world coordinates; each part rebases on its
+          // own committed screen (a selection can span screens via shift-click)
           mutate((doc0) => {
-            const parts = doc0.parts.map((p) =>
-              d.ids.includes(p.id) && p.screen !== null ? { ...p, screen: null, x: from.x + p.x, y: from.y + p.y } : p,
-            );
+            const parts = doc0.parts.map((p) => {
+              if (!d.ids.includes(p.id) || p.screen === null) return p;
+              const own = doc0.screens.find((s) => s.id === p.screen);
+              return { ...p, screen: null, x: (own?.x ?? from.x) + p.x, y: (own?.y ?? from.y) + p.y };
+            });
             for (const np of parts) if (d.ids.includes(np.id)) d.origins.set(np.id, { x: np.x, y: np.y });
             return { ...doc0, parts };
           }, `drag:${d.ids[0]}`);
@@ -265,7 +293,8 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
         const parts = doc0.parts.map((p) => {
           if (!d.ids.includes(p.id)) return p;
           const po = d.origins.get(p.id)!;
-          const pw = p.w ?? partSize(p.kind).w;
+          const pw = p.w ?? partSize(p.kind, p).w;
+          const ph = p.h ?? partSize(p.kind, p).h;
           if (p.screen === null) {
             // canvas-level: free placement, no screen bounds
             return { ...p, x: grid(po.x + dx) + corrX, y: grid(po.y + dy) + corrY };
@@ -273,7 +302,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
           return {
             ...p,
             x: clamp(grid(po.x + dx) + corrX, 0, Math.max(0, SCREEN_W - pw)),
-            y: clamp(grid(po.y + dy) + corrY, 0, Math.max(0, SCREEN_H - 40)),
+            y: clamp(grid(po.y + dy) + corrY, 0, Math.max(0, SCREEN_H - ph)),
           };
         });
         return { ...doc0, parts };
@@ -290,6 +319,7 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
 
   const onPointerUp = (e?: React.PointerEvent) => {
     const d = drag.current;
+    if (d?.mode === "marquee") setMarqueeRect(null);
     drag.current = null;
     clearGuides();
     // space conversion happened live during the move, when the pointer crossed
@@ -298,11 +328,9 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
   };
 
   // palette drop
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const kind = e.dataTransfer.getData("application/x-sc-kind") as Kind;
-    if (!kind) return;
-    const pt = toDoc(e.clientX, e.clientY);
+  // one placement routine shared by the HTML5 drop and the pointer fallback
+  const placeKindAt = (kind: Kind, clientX: number, clientY: number) => {
+    const pt = toDoc(clientX, clientY);
     const target = hitScreen(doc, pt.x, pt.y);
     if (!target) {
       // the workspace itself: a canvas-level part, world coordinates, kept out of the prompt
@@ -356,6 +384,21 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
           ? { axis: "y", at: y, from: x, to: x + size.w }
           : { axis: "x", at: x, from: y, to: y + size.h };
     if (axis) flashGuides([line], target.id);
+  };
+
+  // publish the placement routine for the palette's pointer fallback
+  useEffect(() => {
+    if (placeRef) placeRef.current = placeKindAt;
+    return () => {
+      if (placeRef) placeRef.current = null;
+    };
+  });
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const kind = e.dataTransfer.getData("application/x-sc-kind") as Kind;
+    if (!kind) return;
+    placeKindAt(kind, e.clientX, e.clientY);
   };
 
   // fit view to content
@@ -465,6 +508,15 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
                     className={`part-wrap${sel.includes(p.id) ? " selected" : ""}`}
                     style={{ left: p.x, top: p.y, width: p.w ?? defaultW(p) }}
                     onPointerDown={(e) => onPartDown(e, p)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={KIND_TEXT[lang][p.kind]}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSel(e.shiftKey ? (sel.includes(p.id) ? sel.filter((s2) => s2 !== p.id) : [...sel, p.id]) : [p.id]);
+                      }
+                    }}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       if (p.kind === "iconButton" || p.kind === "navBar") onOpenIcon(p.id, p.kind === "navBar" ? "icon2" : "icon");
@@ -498,6 +550,15 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
             className={`part-wrap canvas-part${sel.includes(p.id) ? " selected" : ""}`}
             style={{ left: p.x, top: p.y, width: p.w ?? defaultW(p) }}
             onPointerDown={(e) => onPartDown(e, p)}
+            tabIndex={0}
+            role="button"
+            aria-label={KIND_TEXT[lang][p.kind]}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setSel(e.shiftKey ? (sel.includes(p.id) ? sel.filter((s2) => s2 !== p.id) : [...sel, p.id]) : [p.id]);
+              }
+            }}
             onDoubleClick={(e) => {
               e.stopPropagation();
               if (p.kind === "iconButton" || p.kind === "navBar") onOpenIcon(p.id, p.kind === "navBar" ? "icon2" : "icon");
@@ -506,6 +567,9 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
             <SwiftPart part={p} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} lang={lang} />
           </div>
         ))}
+
+        {/* world-level marquee rectangle while dragging a selection box */}
+        {marqueeRect ? <div className="marquee" style={{ left: marqueeRect.x, top: marqueeRect.y, width: marqueeRect.w, height: marqueeRect.h }} /> : null}
 
         {/* world-level alignment guides for a canvas-level drag */}
         {guides.map((g, i) => (
@@ -564,9 +628,9 @@ export default function Canvas({ editor, onOpenIcon }: Props) {
       </div>
 
       <div className="canvas-hud">
-        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(1)} title="Zoom in" aria-label="Zoom in"><Icon name="plus.magnifyingglass" size={15} /></button>
-        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(-1)} title="Zoom out" aria-label="Zoom out"><Icon name="minus.magnifyingglass" size={15} /></button>
-        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(0)} title="Fit (0)" aria-label="Fit"><Icon name="arrow.up.left.and.arrow.down.right" size={15} /></button>
+        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(1)} title={t("zoom.in")} aria-label={t("zoom.in")}><Icon name="plus.magnifyingglass" size={15} /></button>
+        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(-1)} title={t("zoom.out")} aria-label={t("zoom.out")}><Icon name="minus.magnifyingglass" size={15} /></button>
+        <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(0)} title={t("zoom.fit")} aria-label={t("zoom.fit")}><Icon name="arrow.up.left.and.arrow.down.right" size={15} /></button>
         <span className="zoom-num">{Math.round(view.z * 100)}%</span>
       </div>
       {doc.screens.length === 0 ? <div className="canvas-empty">{t("screen.empty")}</div> : null}

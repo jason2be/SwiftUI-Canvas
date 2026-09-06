@@ -21,8 +21,8 @@ interface Props {
 
 const radius = (capsule: boolean, h: number) => (capsule ? h / 2 : 12);
 
-export default function SwiftPart({ part: p, palette: c, capsule, dark, lang = "en" }: Props) {
-  const fontStack = "-apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif";
+function SwiftPartImpl({ part: p, palette: c, capsule, dark, lang = "en" }: Props) {
+  const fontStack = c.font;
 
   switch (p.kind) {
     case "button": {
@@ -804,3 +804,8 @@ function v2pct(value: number | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   return Math.min(100, Math.max(0, value <= 1 ? value * 100 : value));
 }
+
+// memoized: a drag re-renders the canvas every frame, and unchanged parts
+// must not re-run their subtrees (palette identity is stable via useMemo)
+const SwiftPart = React.memo(SwiftPartImpl);
+export default SwiftPart;

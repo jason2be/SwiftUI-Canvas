@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getT } from "@/lib/i18n";
 import { paletteOf } from "@/lib/theme";
-import { BACK_TARGET, partsOf, screenBgCss, screenById, type Part, type Transition } from "@/lib/tokens";
+import { BACK_TARGET, SCREEN_H, SCREEN_W, partSize, partsOf, screenBgCss, screenById, type Part, type Transition } from "@/lib/tokens";
 import SwiftPart from "./SwiftPart";
 import { ScreenChrome } from "./ScreenChrome";
 import type { Editor } from "@/lib/store";
@@ -25,6 +25,8 @@ interface Anim {
   kind: Transition;
   dir: 1 | -1; // 1 = forward, -1 = back
   n: number; // remount key so the keyframe restarts every time
+  /** zoom source as % of the screen, from the tapped control's center */
+  origin?: { x: number; y: number };
 }
 
 const ANIM_MS = 380;
@@ -32,11 +34,13 @@ const ANIM_MS = 380;
 export default function Preview({ editor, startScreen, onExit }: Props) {
   const { doc, lang } = editor;
   const t = getT(lang);
-  const pal = paletteOf(doc.theme);
+  const pal = useMemo(() => paletteOf(doc.theme), [doc.theme]);
   const [stack, setStack] = useState<string[]>([startScreen ?? doc.screens[0]?.id ?? ""]);
   const [anim, setAnim] = useState<Anim | null>(null);
   const animN = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastKind = useRef<Transition>("push");
+  const [presented, setPresented] = useState<string | null>(null);
   const busy = anim !== null;
 
   // fit the phone to the window, and keep fitting on resize
@@ -56,14 +60,15 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
   }, []);
 
   const navigate = useCallback(
-    (target: string, kind: Transition, back = false) => {
+    (target: string, kind: Transition, back = false, origin?: { x: number; y: number }) => {
       if (busy) return; // one transition at a time
+      lastKind.current = kind;
       if (kind === "none") {
         setStack((st) => (back ? (st.length > 1 ? st.slice(0, -1) : st) : [...st, target]));
         return;
       }
       animN.current += 1;
-      setAnim({ screen: back ? "" : target, kind, dir: back ? -1 : 1, n: animN.current });
+      setAnim({ screen: back ? "" : target, kind, dir: back ? -1 : 1, n: animN.current, origin });
       timer.current = setTimeout(() => {
         setStack((st) =>
           back
@@ -80,33 +85,44 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
     [busy]
   );
 
-  const pop = useCallback(() => {
-    if (busy) return;
-    setStack((st) => (st.length > 1 ? st.slice(0, -1) : st));
-  }, [busy]);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || busy) return;
-      if (stack.length > 1) pop();
+      if (stack.length > 1) navigate("", lastKind.current, true);
       else onExit();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [stack, busy, pop, onExit]);
+  }, [stack, busy, navigate, onExit]);
 
   const top = stack[stack.length - 1];
   const screen = screenById(doc, top);
   if (!screen) return null;
 
   const tapOf = (p: Part) => {
+    // a control that presents an alert/sheet from the same screen opens it as
+    // an overlay instead of navigating
+    if (p.presents) {
+      const target = partsOf(doc, stack[stack.length - 1]).find((q) => q.id === p.presents);
+      if (target) {
+        return () => setPresented(target.id);
+      }
+    }
     const link = p.link;
     if (!link?.target) return undefined;
+    // the tapped control is the zoom source: hand its center to the transition
+    const origin =
+      link.transition === "zoom"
+        ? {
+            x: Math.min(100, Math.max(0, ((p.x + (p.w ?? 160) / 2) / SCREEN_W) * 100)),
+            y: Math.min(100, Math.max(0, ((p.y + (p.h ?? partSize(p.kind, p).h) / 2) / SCREEN_H) * 100)),
+          }
+        : undefined;
     return () => {
       if (link.target === BACK_TARGET) {
-        if (stack.length > 1) navigate("", link.transition, true);
+        if (stack.length > 1) navigate("", link.transition, true, origin);
       } else {
-        navigate(link.target, link.transition);
+        navigate(link.target, link.transition, false, origin);
       }
     };
   };
@@ -196,13 +212,17 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
               );
             })}
             {!anim && stack.length > 1 ? (
-              <button className="preview-back" onClick={pop}>{t("preview.back")}</button>
+              <button className="preview-back" onClick={() => navigate("", lastKind.current, true)}>{t("preview.back")}</button>
             ) : null}
           </div>
 
           {/* the moving screen during a transition */}
           {anim && mover ? (
-            <div key={anim.n} className={`preview-screen ${moverClass}`} style={{ background: screenBgCss(mover.bg, doc.theme.scheme === "dark") }}>
+            <div
+              key={anim.n}
+              className={`preview-screen ${moverClass}`}
+              style={{ background: screenBgCss(mover.bg, doc.theme.scheme === "dark"), transformOrigin: anim.kind === "zoom" && anim.origin ? `${anim.origin.x}% ${anim.origin.y}%` : undefined }}
+            >
               <div className="screen-island" />
               <ScreenChrome screen={mover} dark={doc.theme.scheme === "dark"} />
               {partsOf(doc, mover.id).map((p) => (
@@ -214,6 +234,44 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
           ) : null}
         </div>
       </div>
+      {/* a presented alert/sheet floats over the current screen; tap the
+          backdrop to dismiss, tap a button option to navigate */}
+      {presented
+        ? (() => {
+            const m = screenById(doc, top);
+            const modal = m ? partsOf(doc, m.id).find((p) => p.id === presented) : null;
+            if (!modal) return null;
+            const size = partSize(modal.kind, modal);
+            const isAlert = modal.kind === "alert";
+            const left = isAlert ? (SCREEN_W - size.w) / 2 : 0;
+            const width = isAlert ? size.w : SCREEN_W;
+            const topPx = isAlert ? (SCREEN_H - size.h) / 2 : SCREEN_H - size.h;
+            return (
+              <div className="preview-modal-backdrop" onClick={() => setPresented(null)}>
+                <div className="preview-modal" style={{ left, top: topPx, width, height: size.h }}>
+                  <SwiftPart part={modal} palette={pal} capsule={doc.theme.shape === "capsule"} dark={doc.theme.scheme === "dark"} lang={lang} />
+                  {isAlert &&
+                    (modal.options ?? []).map((o, i) =>
+                      o.target ? (
+                        <button
+                          key={i}
+                          className="preview-tabzone"
+                          style={{ left: (i * width) / (modal.options?.length ?? 1), top: size.h - 44, width: width / (modal.options?.length ?? 1), height: 44 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPresented(null);
+                            if (o.target === BACK_TARGET) {
+                              if (stack.length > 1) navigate("", "none", true);
+                            } else navigate(o.target!, "push");
+                          }}
+                        />
+                      ) : null
+                    )}
+                </div>
+              </div>
+            );
+          })()
+        : null}
       <div className="preview-foot">
         <span className="hint">{stack.length > 1 ? "" : t("preview.exit")}</span>
         <button className="mini" onClick={onExit}>{t("preview.exit")}</button>

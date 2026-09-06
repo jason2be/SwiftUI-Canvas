@@ -297,6 +297,21 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                   </select>
                 </Field>
               )}
+              {["alert", "sheet"].some((k) => doc.parts.some((p) => p.id !== part.id && p.screen === part.screen && p.kind === k)) && (
+                <Field label={t("field.presents")}>
+                  <select
+                    value={part.presents ?? ""}
+                    onChange={(e) => patch(part.id, { presents: e.target.value || undefined })}
+                  >
+                    <option value="">{t("field.linkNone")}</option>
+                    {doc.parts
+                      .filter((p) => p.id !== part.id && p.screen === part.screen && (p.kind === "alert" || p.kind === "sheet"))
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.label || p.id}</option>
+                      ))}
+                  </select>
+                </Field>
+              )}
             </>
           )}
 

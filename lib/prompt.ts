@@ -317,11 +317,20 @@ function noteText(lang: Lang, it: Part): string {
 }
 
 function linkText(lang: Lang, it: Part, doc: Doc): string {
-  const link = it.link;
-  if (!link || !hasText(link.target)) return "";
-  const target = link.target === BACK_TARGET ? (lang === "zh" ? "返回上一屏" : "goes back") : `${lang === "zh" ? "跳转到屏幕" : "opens the screen"} ${screenName(doc, link.target, "?")}`;
-  const trans = TRANSITION_TEXT[lang][link.transition];
-  return lang === "zh" ? `。点击后${target}，过渡：${trans}` : `. Tapping it ${target} with a ${trans} transition`;
+  const presents = it.presents
+    ? (() => {
+        const m = doc.parts.find((p) => p.id === it.presents);
+        return m ? (lang === "zh" ? `。点击后弹出${m.kind === "alert" ? "警告框" : "面板"}「${m.label || m.id}」` : `. Tapping it presents the ${m.kind} "${m.label || m.id}"`) : "";
+      })()
+    : "";
+  if (!presents) {
+    const link = it.link;
+    if (!link || !hasText(link.target)) return "";
+    const target = link.target === BACK_TARGET ? (lang === "zh" ? "返回上一屏" : "goes back") : `${lang === "zh" ? "跳转到屏幕" : "opens the screen"} ${screenName(doc, link.target, "?")}`;
+    const trans = TRANSITION_TEXT[lang][link.transition];
+    return lang === "zh" ? `。点击后${target}，过渡：${trans}` : `. Tapping it ${target} with a ${trans} transition`;
+  }
+  return presents;
 }
 
 /* ---------- whole prompt ---------- */
@@ -362,5 +371,14 @@ export function buildPrompt(doc: Doc, scope: PromptScope, lang: Lang): string {
       : "Keep the code idiomatic SwiftUI: one file per screen, @Observable state, no third-party dependencies, no UIKit.";
 
   const body = screens.map((s) => screenText(lang, doc, s, true)).join("\n\n");
-  return [intro, apiBaseline(lang), themeText(doc), navText, body, closing].join("\n\n");
+  // a single-screen brief can still reference other screens; say so explicitly
+  // so the builder stubs their navigation instead of asking for them
+  const outside = scope.kind === "screen" ? doc.screens.filter((s) => !screens.some((x) => x.id === s.id)).map((s) => s.name) : [];
+  const externNote =
+    scope.kind === "screen" && outside.length > 0
+      ? lang === "zh"
+        ? `注意：本屏跳转到的屏幕（${outside.join("、")}）不在本次范围内，请按名称预留导航接口即可。`
+        : `Note: screens linked from this brief (${outside.join(", ")}) are outside its scope; stub their navigation by name.`
+      : "";
+  return [intro, apiBaseline(lang), themeText(doc), navText, body, externNote, closing].filter(Boolean).join("\n\n");
 }

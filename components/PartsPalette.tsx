@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { getT, KIND_TEXT } from "@/lib/i18n";
-import { PALETTE_ORDER, type Kind } from "@/lib/tokens";
+import { type Kind } from "@/lib/tokens";
 import Icon from "./Icon";
 import type { Editor } from "@/lib/store";
 
@@ -96,11 +96,51 @@ function KindGlyph({ kind }: { kind: Kind }) {
   }
 }
 
-export default function PartsPalette({ editor, onAdd }: { editor: Editor; onAdd: (kind: Kind) => void }) {
+export default function PartsPalette({ editor, onAdd, placeRef }: { editor: Editor; onAdd: (kind: Kind) => void; placeRef?: React.MutableRefObject<((kind: Kind, clientX: number, clientY: number) => void) | null> }) {
   const { lang } = editor;
   const t = getT(lang);
+  // pointer fallback for touch (HTML5 drag does not fire there): track a
+  // drag on a palette item and place it where the finger lifts
+  const [ghost, setGhost] = useState<{ kind: Kind; x: number; y: number } | null>(null);
+  const pending = useRef<{ kind: Kind; x: number; y: number; moved: boolean; touch: boolean } | null>(null);
+  const suppressClick = useRef(false);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const p = pending.current;
+      if (!p) return;
+      if (!p.moved && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 8) return;
+      p.moved = true;
+      setGhost({ kind: p.kind, x: e.clientX, y: e.clientY });
+    };
+    const onUp = (e: PointerEvent) => {
+      const p = pending.current;
+      pending.current = null;
+      setGhost(null);
+      if (!p) return;
+      if (p.moved && placeRef?.current) {
+        placeRef.current(p.kind, e.clientX, e.clientY);
+        suppressClick.current = true;
+      } else if (p.touch) {
+        onAdd(p.kind); // a touch tap has no click on some browsers; place once
+        suppressClick.current = true;
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  });
+
   return (
     <div className="palette">
+      {ghost ? (
+        <div className="palette-ghost" style={{ left: ghost.x, top: ghost.y }}>
+          <KindGlyph kind={ghost.kind} />
+        </div>
+      ) : null}
       {GROUPS.map((g) => (
         <div key={g.key} className="palette-group">
           <div className="panel-title">{t(g.key)}</div>
@@ -114,7 +154,17 @@ export default function PartsPalette({ editor, onAdd }: { editor: Editor; onAdd:
                   e.dataTransfer.setData("application/x-sc-kind", k);
                   e.dataTransfer.effectAllowed = "copy";
                 }}
-                onClick={() => onAdd(k)}
+                onPointerDown={(e) => {
+                  if (e.pointerType === "mouse") return; // mouse uses HTML5 drag
+                  pending.current = { kind: k, x: e.clientX, y: e.clientY, moved: false, touch: true };
+                }}
+                onClick={() => {
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    return;
+                  }
+                  onAdd(k);
+                }}
                 title={KIND_TEXT[lang][k]}
               >
                 <KindGlyph kind={k} />
