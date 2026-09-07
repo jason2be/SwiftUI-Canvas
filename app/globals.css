@@ -558,6 +558,18 @@ body {
   color: var(--text-2);
   min-width: 44px;
   text-align: center;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  height: 26px;
+  cursor: pointer;
+  appearance: none;
+  font-family: inherit;
+}
+
+.canvas-hud select.zoom-num:hover {
+  background: var(--panel-3);
+  color: var(--text-1);
 }
 
 .canvas-empty {

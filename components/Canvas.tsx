@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getT, KIND_TEXT } from "@/lib/i18n";
+import { getT, KIND_TEXT, type Lang } from "@/lib/i18n";
 import { paletteOf } from "@/lib/theme";
 import {
   BACK_TARGET,
@@ -47,6 +47,10 @@ interface View {
 
 const MIN_Z = 0.25;
 const MAX_Z = 2.5;
+/* preset zoom levels: the +/- buttons, the level picker and future shortcuts
+ * step through this ladder, so a free wheel-zoom value (e.g. 98%) can always
+ * land back on a clean level; wheel zoom itself stays continuous */
+const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5];
 
 export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
   const { doc, lang, tool, sel, setSel, activeScreen, setActiveScreen, mutate } = editor;
@@ -440,18 +444,24 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
   useEffect(() => {
     const el = hostRef.current;
     if (!el) return;
-    (el as HTMLDivElement & { __zoom?: (dir: number) => void }).__zoom = (dir: number) => {
+    const zoomTo = (target: number) => {
       const v = viewRef.current;
-      if (dir === 0) {
-        fit();
-        return;
-      }
-      const z = clamp(v.z * (dir > 0 ? 1.2 : 1 / 1.2), MIN_Z, MAX_Z);
+      const z = clamp(target, MIN_Z, MAX_Z);
       const cx = el.clientWidth / 2;
       const cy = el.clientHeight / 2;
       const k = z / v.z;
       setView({ z, x: cx - (cx - v.x) * k, y: cy - (cy - v.y) * k });
     };
+    (el as HTMLDivElement & { __zoom?: (dir: number) => void; __zoomTo?: (z: number) => void }).__zoom = (dir: number) => {
+      const v = viewRef.current;
+      if (dir === 0) {
+        fit();
+        return;
+      }
+      const step = dir > 0 ? ZOOM_STEPS.find((s) => s > v.z + 1e-3) : [...ZOOM_STEPS].reverse().find((s) => s < v.z - 1e-3);
+      zoomTo(step ?? (dir > 0 ? MAX_Z : MIN_Z));
+    };
+    (el as HTMLDivElement & { __zoom?: (dir: number) => void; __zoomTo?: (z: number) => void }).__zoomTo = zoomTo;
   }, [fit]);
 
   const cursor = tool === "hand" || space ? "grab" : "default";
@@ -648,10 +658,38 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
         <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(1)} title={t("zoom.in")} aria-label={t("zoom.in")}><Icon name="plus.magnifyingglass" size={15} /></button>
         <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(-1)} title={t("zoom.out")} aria-label={t("zoom.out")}><Icon name="minus.magnifyingglass" size={15} /></button>
         <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(0)} title={t("zoom.fit")} aria-label={t("zoom.fit")}><Icon name="arrow.up.left.and.arrow.down.right" size={15} /></button>
-        <span className="zoom-num">{Math.round(view.z * 100)}%</span>
+        <ZoomLevel z={view.z} lang={lang} onPick={(z) => (hostRef.current as (HTMLDivElement & { __zoomTo?: (z: number) => void }) | null)?.__zoomTo?.(z)} />
       </div>
       {doc.screens.length === 0 ? <div className="canvas-empty">{t("screen.empty")}</div> : null}
     </div>
+  );
+}
+
+/* the zoom read-out doubles as a preset-level picker; when the current zoom
+ * sits between levels (free wheel zoom) it shows as an extra option so the
+ * select never renders empty */
+function ZoomLevel({ z, lang, onPick }: { z: number; lang: Lang; onPick: (z: number) => void }) {
+  const t = getT(lang);
+  const pct = Math.round(z * 100);
+  const onLadder = ZOOM_STEPS.some((s) => Math.round(s * 100) === pct);
+  return (
+    <select
+      className="zoom-num"
+      value={pct}
+      onChange={(e) => onPick(Number(e.target.value) / 100)}
+      title={t("zoom.level")}
+      aria-label={t("zoom.level")}
+    >
+      {!onLadder && <option value={pct}>{pct}%</option>}
+      {ZOOM_STEPS.map((step) => {
+        const level = Math.round(step * 100);
+        return (
+          <option key={level} value={level}>
+            {level}%
+          </option>
+        );
+      })}
+    </select>
   );
 }
 
