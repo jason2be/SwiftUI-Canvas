@@ -53,7 +53,7 @@ export default function Toolbar({ editor, onAddScreen, onTidy, onPreview, onProm
     } else {
       // try the tolerant path before giving up
       try {
-        const v = validateDoc(JSON.parse(await f.text()), "File");
+        const v = validateDoc(JSON.parse(await f.text()), lang === "zh" ? "文件" : "File", lang);
         if (v.doc) {
           replaceDoc(v.doc);
           onLoaded?.(v.warnings);

@@ -125,13 +125,13 @@ Fields any part may carry:
 | `box` | rounded container | `variant` `background` / `secondary` / `tertiary`, `w`, `h` | 361 × 220 |
 | `menu` | Menu (long-press / tap menu) | `options` `{label, icon}`, `link`, `note` | 160 × 50 |
 | `stepper` | Stepper | `value`, `label` | 220 × 36 |
-| `datePicker` | DatePicker | `variant` `compact` / `graphical`, `label` | 240 × 36 |
+| `datePicker` | DatePicker | `variant` `compact` / `graphical` (`compact` 240 × 36, `graphical` 320 × 320), `label` | 240 × 36 |
 | `secureField` | SecureField | `label`, `supporting` placeholder | 361 × 60 |
 | `textEditor` | TextEditor | `supporting` placeholder, `w`, `h` | 280 × 120 |
 | `shareLink` | ShareLink | `label`, `icon` | 160 × 50 |
 | `link` | Link | `label` | 120 × 25 |
 | `contentUnavailable` | ContentUnavailableView | `label`, `supporting`, `icon` | 361 × 200 |
-| `disclosure` | DisclosureGroup | `options` (rows), `label` | 361 × 44 |
+| `disclosure` | DisclosureGroup | `options` (rows), `label` | 361 × 44 (expands by 44 × extra rows) |
 | `labeledContent` | LabeledContent | `label`, `supporting` value | 361 × 44 |
 | `map` | Map placeholder | | 361 × 200 |
 | `chart` | static Chart | `variant` `bar` / `line` | 361 × 200 |

@@ -109,14 +109,63 @@ export interface Validated {
   warnings: string[];
 }
 
+type MsgKey =
+  | "notObject"
+  | "theme"
+  | "screens"
+  | "missingTitle"
+  | "unknownLang"
+  | "droppedPart"
+  | "dupPart"
+  | "movedToWorkspace"
+  | "linkRemoved"
+  | "targetRemoved"
+  | "presentsRemoved"
+  | "dupScreen";
+
+/** repair notices in the interface language; ids and names stay verbatim */
+const msg = (lang: "en" | "zh", key: MsgKey, label: string, detail = ""): string => {
+  const zh: Record<MsgKey, [string, string]> = {
+    notObject: ["不是 JSON 对象", ""],
+    theme: ["theme 缺失或格式错误", ""],
+    screens: ["screens 缺失或格式错误", ""],
+    missingTitle: ["缺少标题，已设为", "Untitled App"],
+    unknownLang: ["未知语言，已改用", "en"],
+    droppedPart: ["丢弃了无法识别的组件", ""],
+    dupPart: ["重复的组件 id 已改名为", ""],
+    movedToWorkspace: ["组件引用了不存在的屏幕，已移到工作区", ""],
+    linkRemoved: ["组件指向不存在的屏幕，链接已移除", ""],
+    targetRemoved: ["组件的选项指向不存在的屏幕，目标已移除", ""],
+    presentsRemoved: ["组件弹出的警告/面板不存在（或不在同一屏），弹出已移除", ""],
+    dupScreen: ["重复的屏幕 id 已改名为", ""],
+  };
+  const en: Record<MsgKey, [string, string]> = {
+    notObject: ["is not a JSON object", ""],
+    theme: ["theme is missing or malformed", ""],
+    screens: ["screens are missing or malformed", ""],
+    missingTitle: ["missing title, set to", "Untitled App"],
+    unknownLang: ["unknown language, using", "en"],
+    droppedPart: ["dropped a malformed part", ""],
+    dupPart: ["duplicate part id renamed to", ""],
+    movedToWorkspace: ["part referenced a missing screen, moved to the workspace", ""],
+    linkRemoved: ["part linked to a missing screen, link removed", ""],
+    targetRemoved: ["part had an option pointing at a missing screen, target removed", ""],
+    presentsRemoved: ["part presented a missing or off-screen alert/sheet, presentation removed", ""],
+    dupScreen: ["duplicate screen id renamed to", ""],
+  };
+  const [phrase, arg] = (lang === "zh" ? zh : en)[key];
+  const tail = [arg, detail].filter(Boolean).join(" ");
+  return `${label}${lang === "zh" ? "：" : ": "}${phrase}${tail ? (lang === "zh" ? " " : " ") + tail : ""}`;
+};
+
 /** screen ids the doc actually contains, for dangling-reference checks */
 const screenIds = (screens: { id: string }[]): Set<string> => new Set(screens.map((s) => s.id));
 
-export function validateDoc(value: unknown, label = "document"): Validated {
-  if (!isRecord(value)) return { doc: null, errors: [`${label} is not a JSON object`], warnings: [] };
-  if (!validTheme(value.theme)) return { doc: null, errors: [`${label}: theme is missing or malformed`], warnings: [] };
+export function validateDoc(value: unknown, label = "document", lang: "en" | "zh" = "en"): Validated {
+  if (!isRecord(value)) return { doc: null, errors: [msg(lang, "notObject", label)], warnings: [] };
+  if (!validTheme(value.theme)) return { doc: null, errors: [msg(lang, "theme", label)], warnings: [] };
   if (!Array.isArray(value.screens) || value.screens.length === 0 || !value.screens.every(validScreen)) {
-    return { doc: null, errors: [`${label}: screens are missing or malformed`], warnings: [] };
+    return { doc: null, errors: [msg(lang, "screens", label)], warnings: [] };
   }
   const screens = value.screens as Doc["screens"];
   const ids = screenIds(screens);
@@ -128,7 +177,7 @@ export function validateDoc(value: unknown, label = "document"): Validated {
   for (const s of screens) {
     if (seenScreens.has(s.id)) {
       s.id = `${s.id}v${seenScreens.size}`;
-      warnings.push(`${label}: duplicate screen id renamed to ${s.id}`);
+      warnings.push(msg(lang, "dupScreen", label, s.id));
     }
     seenScreens.add(s.id);
   }
@@ -139,51 +188,64 @@ export function validateDoc(value: unknown, label = "document"): Validated {
   const rawParts = Array.isArray(value.parts) ? value.parts : [];
   for (const raw of rawParts) {
     if (!validPart(raw)) {
-      warnings.push(`${label}: dropped a malformed part${isRecord(raw) && typeof raw.id === "string" ? ` (${raw.id})` : ""}`);
+      warnings.push(msg(lang, "droppedPart", label, isRecord(raw) && typeof raw.id === "string" ? `(${raw.id})` : ""));
       continue;
     }
     let p = raw as Doc["parts"][number];
     if (seen.has(p.id)) {
       p = { ...p, id: `${p.id}d${parts.length}` };
-      warnings.push(`${label}: duplicate part id renamed to ${p.id}`);
+      warnings.push(msg(lang, "dupPart", label, p.id));
     }
     seen.add(p.id);
     if (p.screen !== null && !ids.has(p.screen)) {
       p = { ...p, screen: null };
-      warnings.push(`${label}: part ${p.id} referenced a missing screen, moved to the workspace`);
+      warnings.push(msg(lang, "movedToWorkspace", label, p.id));
     }
     if (p.link && p.link.target !== BACK_TARGET && !ids.has(p.link.target)) {
       p = { ...p, link: undefined };
-      warnings.push(`${label}: part ${p.id} linked to a missing screen, link removed`);
+      warnings.push(msg(lang, "linkRemoved", label, p.id));
     }
     if (p.options?.some((o) => o.target && o.target !== BACK_TARGET && !ids.has(o.target))) {
       p = { ...p, options: p.options.map((o) => (o.target && o.target !== BACK_TARGET && !ids.has(o.target) ? { ...o, target: null } : o)) };
-      warnings.push(`${label}: part ${p.id} had an option pointing at a missing screen, target removed`);
+      warnings.push(msg(lang, "targetRemoved", label, p.id));
     }
-    if (p.presents && !rawParts.some((q) => isRecord(q) && q.id === p.presents && (q.kind === "alert" || q.kind === "sheet"))) {
+    if (p.presents && !rawParts.some((q) => isRecord(q) && q.id === p.presents && q.screen === p.screen && (q.kind === "alert" || q.kind === "sheet"))) {
       p = { ...p, presents: undefined };
-      warnings.push(`${label}: part ${p.id} presented a missing alert/sheet, presentation removed`);
+      warnings.push(msg(lang, "presentsRemoved", label, p.id));
     }
     parts.push(p);
   }
-  return { doc: { ...(value as unknown as Doc), parts }, errors, warnings };
+  // fields isProject requires, normalized so a repaired doc loads and saves
+  // cleanly (projectFileName calls title.trim())
+  const doc: Doc = {
+    title: typeof value.title === "string" ? value.title : "Untitled App",
+    lang: value.lang === "zh" ? "zh" : "en",
+    platform: "ios",
+    theme: value.theme as Doc["theme"],
+    screens,
+    parts,
+  };
+  if (typeof value.title !== "string") warnings.push(msg(lang, "missingTitle", label));
+  return { doc, errors, warnings };
 }
 
 /** paste a whole document beside the current one: every id is remapped, so
  *  nothing collides and internal links keep pointing at the copies */
-export function mergeDoc(incoming: Doc, current: Doc): Doc {
+export function mergeDoc(incoming: Doc, current: Doc): { doc: Doc; idMap: Map<string, string> } {
   const idOf = new Map<string, string>();
   for (const s of incoming.screens) idOf.set(s.id, newId());
   for (const p of incoming.parts) idOf.set(p.id, newId());
-  const remapTarget = (t: string) => (t === BACK_TARGET ? BACK_TARGET : (idOf.get(t) ?? BACK_TARGET));
+  // a target outside the incoming doc has no home here: drop it, like the
+  // validator does, instead of silently rewriting it into "back"
+  const remapTarget = (t: string) => (t === BACK_TARGET ? BACK_TARGET : idOf.get(t));
   const screens = incoming.screens.map((s) => ({ ...s, id: idOf.get(s.id)! }));
   const parts = incoming.parts.map((p) => ({
     ...p,
     id: idOf.get(p.id)!,
     screen: p.screen === null ? null : (idOf.get(p.screen) ?? null),
-    link: p.link ? { ...p.link, target: remapTarget(p.link.target) } : undefined,
-    options: p.options?.map((o) => ({ ...o, target: o.target ? remapTarget(o.target) : null })),
-    presents: p.presents ? (idOf.get(p.presents) ?? undefined) : undefined,
+    link: p.link && remapTarget(p.link.target) !== undefined ? { ...p.link, target: remapTarget(p.link.target)! } : undefined,
+    options: p.options?.map((o) => ({ ...o, target: o.target ? (remapTarget(o.target) ?? null) : null })),
+    presents: p.presents ? idOf.get(p.presents) : undefined,
   }));
-  return { ...current, screens: [...current.screens, ...screens], parts: [...current.parts, ...parts] };
+  return { doc: { ...current, screens: [...current.screens, ...screens], parts: [...current.parts, ...parts] }, idMap: idOf };
 }

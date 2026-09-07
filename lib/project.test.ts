@@ -65,6 +65,40 @@ describe("validateDoc", () => {
     expect(v.doc?.parts).toHaveLength(1);
     expect(v.warnings.join(" ")).toContain("dropped a malformed part");
   });
+
+  it("strips presents triggers that point off-screen or nowhere", () => {
+    const d = base();
+    d.parts.push({ id: "ok", screen: "s1", kind: "alert", x: 60, y: 360, label: "Fine", variant: "plain" });
+    d.parts.push({ id: "ghostBtn", screen: "s1", kind: "button", x: 16, y: 220, label: "G", variant: "bordered", presents: "nope" });
+    d.screens.push({ id: "s2", name: "Other", x: 513, y: 0 });
+    d.parts.push({ id: "movedBtn", screen: "s2", kind: "button", x: 16, y: 220, label: "M", variant: "bordered", presents: "ok" });
+    const v = validateDoc(d);
+    const byId = new Map(v.doc!.parts.map((p) => [p.id, p]));
+    expect(byId.get("ghostBtn")?.presents).toBeUndefined();
+    expect(byId.get("movedBtn")?.presents).toBeUndefined();
+    expect(v.warnings.filter((w) => w.includes("alert/sheet")).length).toBe(2);
+  });
+
+  it("reports repair notices in the requested language", () => {
+    const d = base() as unknown as Record<string, unknown>;
+    (d as { parts: unknown[] }).parts = [{ id: "p9", screen: "ghost", kind: "text", x: 0, y: 0, variant: "body" }];
+    const zh = validateDoc(d, "文件", "zh");
+    expect(zh.warnings[0]).toContain("已移到工作区");
+    const en = validateDoc(d, "File", "en");
+    expect(en.warnings[0]).toContain("moved to the workspace");
+  });
+
+  it("defaults a missing title so the document stays saveable", () => {
+    const d: Record<string, unknown> = {
+      lang: "en",
+      theme: { accent: "systemBlue", scheme: "light", shape: "default", font: "system" },
+      screens: [{ id: "s1", name: "Main", x: 0, y: 0 }],
+      parts: [],
+    };
+    const v = validateDoc(d);
+    expect(v.doc?.title).toBe("Untitled App");
+    expect(v.warnings.join(" ")).toContain("missing title");
+  });
 });
 
 describe("mergeDoc", () => {
@@ -73,7 +107,7 @@ describe("mergeDoc", () => {
     const b = base();
     b.screens[0].name = "Pasted";
     (b.parts[0] as { link?: unknown }).link = { target: "s1", transition: "push" };
-    const merged = mergeDoc(b, a);
+    const { doc: merged } = mergeDoc(b, a);
     expect(merged.screens).toHaveLength(2);
     expect(merged.parts).toHaveLength(2);
     const pastedScreen = merged.screens[1];
@@ -81,6 +115,25 @@ describe("mergeDoc", () => {
     const pastedPart = merged.parts[1];
     expect(pastedPart.screen).toBe(pastedScreen.id);
     expect(pastedPart.link?.target).toBe(pastedScreen.id);
+  });
+
+  it("remaps presents triggers and drops targets that lead nowhere", () => {
+    const a = base();
+    const b = base();
+    b.parts.push(
+      { id: "al", screen: "s1", kind: "alert", x: 60, y: 360, label: "Sure?", variant: "plain" },
+      { id: "btn", screen: "s1", kind: "button", x: 16, y: 200, label: "Go", variant: "bordered", presents: "al", link: { target: "elsewhere", transition: "push" } },
+    );
+    const { doc: merged } = mergeDoc(b, a);
+    const pastedScreen = merged.screens[1];
+    const pastedAlert = merged.parts.find((p) => p.screen === pastedScreen.id && p.kind === "alert")!;
+    const goCopies = merged.parts.filter((p) => p.screen === pastedScreen.id && p.label === "Go");
+    expect(goCopies).toHaveLength(2);
+    const presentsButton = goCopies.find((p) => p.presents)!;
+    // presents follows the copy of the alert
+    expect(presentsButton.presents).toBe(pastedAlert.id);
+    // the dangling link target is dropped, not rewritten to "back"
+    expect(presentsButton.link).toBeUndefined();
   });
 });
 

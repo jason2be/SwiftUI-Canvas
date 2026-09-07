@@ -1495,3 +1495,9 @@ body {
     min-height: 34px;
   }
 }
+
+/* touch palette drags: vertical stays panel scrolling (pan-y), horizontal
+ * moves reach the pointer fallback so a part can be dragged into the canvas */
+.palette-item {
+  touch-action: pan-y;
+}

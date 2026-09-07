@@ -263,6 +263,8 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                         screen: to.id,
                         x: Math.min(Math.max(0, part.x - (from?.x ?? to.x)), Math.max(0, SCREEN_W - (part.w ?? partSize(part.kind, part).w))),
                         y: Math.min(Math.max(0, part.y - (from?.y ?? to.y)), Math.max(0, SCREEN_H - (part.h ?? partSize(part.kind, part).h))),
+                        // the presented alert/sheet does not move with the part
+                        presents: undefined,
                       });
                     }
                   }}

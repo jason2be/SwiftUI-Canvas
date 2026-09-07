@@ -88,12 +88,17 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || busy) return;
+      // a presented modal is dismissed first, screens pop one at a time after
+      if (presented) {
+        setPresented(null);
+        return;
+      }
       if (stack.length > 1) navigate("", lastKind.current, true);
       else onExit();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [stack, busy, navigate, onExit]);
+  }, [stack, busy, presented, navigate, onExit]);
 
   const top = stack[stack.length - 1];
   const screen = screenById(doc, top);
@@ -139,7 +144,7 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
       p.kind === "tabBar"
         ? { left: p.x + i * w, top: p.y, width: w, height: p.h ?? 83 }
         : p.kind === "list"
-          ? { left: p.x, top: p.y + rowH + i * rowH, width: p.w ?? 361, height: rowH }
+          ? { left: p.x, top: p.y + i * rowH, width: p.w ?? 361, height: rowH }
           : { left: p.x + i * ((p.w ?? 270) / opts.length), top: p.y + (p.h ?? 124) - 44, width: (p.w ?? 270) / opts.length, height: 44 };
     const transition = p.kind === "list" ? "push" : "none";
     return opts.map((o, i) => {
@@ -232,8 +237,6 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
               ))}
             </div>
           ) : null}
-        </div>
-      </div>
       {/* a presented alert/sheet floats over the current screen; tap the
           backdrop to dismiss, tap a button option to navigate */}
       {presented
@@ -272,6 +275,8 @@ export default function Preview({ editor, startScreen, onExit }: Props) {
             );
           })()
         : null}
+        </div>
+      </div>
       <div className="preview-foot">
         <span className="hint">{stack.length > 1 ? "" : t("preview.exit")}</span>
         <button className="mini" onClick={onExit}>{t("preview.exit")}</button>

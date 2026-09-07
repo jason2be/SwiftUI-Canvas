@@ -15,14 +15,14 @@ export interface LoadResult {
   warnings: string[];
 }
 
-function loadDoc(): LoadResult {
+function loadDoc(lang: "en" | "zh"): LoadResult {
   try {
     const raw = localStorage.getItem(DOC_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       // the same validation a file or share link goes through
       if (isProject(parsed)) return { doc: parsed, warnings: [] };
-      const v = validateDoc(parsed, "Saved design");
+      const v = validateDoc(parsed, lang === "zh" ? "已保存的设计" : "Saved design", lang);
       if (v.doc) return { doc: v.doc, warnings: v.warnings };
     }
   } catch {
@@ -74,7 +74,7 @@ export function useEditor(): Editor {
   useEffect(() => {
     const stored = (localStorage.getItem(LANG_KEY) as Lang | null) ?? initLang();
     setLangState(stored);
-    const { doc: loadedDoc, warnings } = loadDoc();
+    const { doc: loadedDoc, warnings } = loadDoc(stored === "zh" ? "zh" : "en");
     docRef.current = loadedDoc;
     setDoc(loadedDoc);
     if (warnings.length) loadWarnings.current = warnings;

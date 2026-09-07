@@ -303,7 +303,7 @@ function screenText(lang: Lang, doc: Doc, screen: Screen, withHeading: boolean):
     } else {
       const items = [...row]
         .sort((a, b) => a.x - b.x)
-        .map((p) => `[${partText(lang, p, doc)}${linkText(lang, p, doc)}]`)
+        .map((p) => `[${partText(lang, p, doc)}${noteText(lang, p)}${linkText(lang, p, doc)}]`)
         .join(lang === "zh" ? "，" : ", ");
       lines.push(`- ${lang === "zh" ? "一行：" : "One row, left to right: "}${items}`);
     }

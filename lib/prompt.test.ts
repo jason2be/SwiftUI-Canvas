@@ -120,12 +120,36 @@ describe("buildPrompt", () => {
     const d: Doc = newDoc("en");
     d.parts.push(
       { id: "a", screen: d.screens[0].id, kind: "button", x: 16, y: 210, label: "Start", variant: "borderedProminent" },
-      { id: "b", screen: d.screens[0].id, kind: "toggle", x: 250, y: 212, label: "Weekly", variant: "plain", checked: true },
+      { id: "b", screen: d.screens[0].id, kind: "toggle", x: 250, y: 212, label: "Weekly", variant: "plain", checked: true, note: "saves the schedule" },
     );
     const p = buildPrompt(d, { kind: "screen", id: d.screens[0].id }, "en");
     const rowLine = p.split("\n").find((l) => l.includes("One row, left to right"));
     expect(rowLine).toBeTruthy();
     expect(rowLine).toContain("Start");
     expect(rowLine).toContain("Weekly");
+    // a behavior note must survive row grouping
+    expect(rowLine).toContain("saves the schedule");
+  });
+
+  it("describes a presents trigger instead of a navigation link", () => {
+    const d: Doc = newDoc("en");
+    const sid = d.screens[0].id;
+    d.parts.push(
+      { id: "btn", screen: sid, kind: "button", x: 16, y: 210, label: "Remove", variant: "borderedProminent", presents: "al" },
+      { id: "al", screen: sid, kind: "alert", x: 61, y: 364, label: "Are you sure?", variant: "plain", options: [{ label: "Yes", target: sid }, { label: "No" }] },
+    );
+    const en = buildPrompt(d, { kind: "screen", id: sid }, "en");
+    expect(en).toContain('presents the alert "Are you sure?"');
+    const zh = buildPrompt(d, { kind: "screen", id: sid }, "zh");
+    expect(zh).toContain("弹出警告框「Are you sure?」");
+  });
+
+  it("notes screens outside a single-screen brief", () => {
+    const d: Doc = newDoc("en");
+    d.screens.push({ id: "detail", name: "Detail", x: 600, y: 60 });
+    d.parts.push({ id: "go", screen: d.screens[0].id, kind: "button", x: 16, y: 210, label: "Open", variant: "bordered", link: { target: "detail", transition: "push" } });
+    const p = buildPrompt(d, { kind: "screen", id: d.screens[0].id }, "en");
+    expect(p).toContain("outside its scope");
+    expect(p).toContain("Detail");
   });
 });

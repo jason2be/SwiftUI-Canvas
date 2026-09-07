@@ -137,7 +137,8 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
     if (e.currentTarget === e.target) {
       const pt = toDoc(e.clientX, e.clientY);
       drag.current = { mode: "marquee", sx: pt.x, sy: pt.y, add: e.shiftKey, base: e.shiftKey ? sel : [] };
-      setMarqueeRect({ x: pt.x, y: pt.y, w: 0, h: 0 });
+      setMarquee({ x: pt.x, y: pt.y, w: 0, h: 0 });
+      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     } else {
       setSel([]);
       setActiveScreen(null);
@@ -166,6 +167,12 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
 
   // marquee selection over the workspace (canvas-level parts only)
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  // mirrored so pointer-up can read the final size synchronously
+  const marqueeRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const setMarquee = (r: { x: number; y: number; w: number; h: number } | null) => {
+    marqueeRectRef.current = r;
+    setMarqueeRect(r);
+  };
 
   const onScreenDown = (e: React.PointerEvent, screen: Screen) => {
     if (tool === "hand" || space) return;
@@ -185,7 +192,7 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
       const y = Math.min(d.sy, pt.y);
       const w = Math.abs(pt.x - d.sx);
       const h = Math.abs(pt.y - d.sy);
-      setMarqueeRect({ x, y, w, h });
+      setMarquee({ x, y, w, h });
       const inside = doc.parts.filter((p) => p.screen === null && p.x >= x && p.y >= y && p.x + (p.w ?? partSize(p.kind, p).w) <= x + w && p.y + (p.h ?? partSize(p.kind, p).h) <= y + h).map((p) => p.id);
       setSel([...d.base, ...inside.filter((id) => !d.base.includes(id))]);
       return;
@@ -215,7 +222,8 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
             const parts = doc0.parts.map((p) => {
               if (!d.ids.includes(p.id) || p.screen === null) return p;
               const own = doc0.screens.find((s) => s.id === p.screen);
-              return { ...p, screen: null, x: (own?.x ?? from.x) + p.x, y: (own?.y ?? from.y) + p.y };
+              // the presented alert/sheet stays behind on its own screen
+              return { ...p, screen: null, x: (own?.x ?? from.x) + p.x, y: (own?.y ?? from.y) + p.y, presents: undefined };
             });
             for (const np of parts) if (d.ids.includes(np.id)) d.origins.set(np.id, { x: np.x, y: np.y });
             return { ...doc0, parts };
@@ -233,6 +241,7 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
                 screen: to.id,
                 x: clamp(p.x - to.x, 0, Math.max(0, SCREEN_W - pw)),
                 y: clamp(p.y - to.y, 0, Math.max(0, SCREEN_H - ph)),
+                presents: undefined,
               };
             });
             for (const np of parts) if (d.ids.includes(np.id)) d.origins.set(np.id, { x: np.x, y: np.y });
@@ -319,7 +328,15 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
 
   const onPointerUp = (e?: React.PointerEvent) => {
     const d = drag.current;
-    if (d?.mode === "marquee") setMarqueeRect(null);
+    if (d?.mode === "marquee") {
+      // a box that never grew was a plain click on empty workspace: clear
+      const r = marqueeRectRef.current;
+      setMarquee(null);
+      if (!d.add && r && r.w < 3 && r.h < 3) {
+        setSel([]);
+        setActiveScreen(null);
+      }
+    }
     drag.current = null;
     clearGuides();
     // space conversion happened live during the move, when the pointer crossed

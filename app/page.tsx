@@ -58,10 +58,13 @@ export default function Page() {
     if (mode === "replace") {
       replaceDoc(shared);
     } else {
+      // shift the pasted screens below the current ones, then resolve the
+      // pasted root screen's NEW id (mergeDoc remaps every id)
       const yOffset = Math.max(0, ...doc.screens.map((s) => s.y)) + SCREEN_H + 120;
       const shifted: Doc = { ...shared, screens: shared.screens.map((s) => ({ ...s, y: s.y + yOffset })) };
-      mutate((d) => mergeDoc(shifted, d));
-      setActiveScreen(shared.screens[0]?.id ?? null);
+      const { doc: merged, idMap } = mergeDoc(shifted, doc);
+      mutate(() => merged);
+      setActiveScreen(idMap.get(shared.screens[0]?.id ?? "") ?? null);
     }
   };
 
@@ -143,13 +146,15 @@ export default function Page() {
         const copied = clipboard.current;
         if (!copied.length) return;
         e.preventDefault();
-        // paste beside the copies, onto the active screen when pasting there
+        // paste beside the copies, onto the active screen when pasting there;
+        // re-homed parts lose presents (their alert stays on the old screen)
         const active = activeScreen ?? copied[0].screen;
         mutate((d) => {
           const pasted = copied.map((p) => ({
             ...p,
             id: `${p.id}p${Math.random().toString(36).slice(2, 6)}`,
             screen: active !== null && p.screen !== null ? active : p.screen,
+            presents: active !== null && p.screen !== null && active !== p.screen ? undefined : p.presents,
             options: p.options?.map((o) => ({ ...o })),
           }));
           return { ...d, parts: [...d.parts, ...pasted] };
