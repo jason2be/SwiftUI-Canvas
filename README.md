@@ -67,6 +67,25 @@ npm test
 
 The app is a static Next.js export with no backend. To host it under a sub-path (for example a GitHub Pages project site), set `NEXT_PUBLIC_BASE_PATH=/your-repo` at build time.
 
+## CLI
+
+```bash
+npm run build:cli
+node dist/cli.js --help
+```
+
+The same document the editor saves works from the terminal — check, tidy, prompt, preview, open:
+
+```bash
+node dist/cli.js check  design.sc.json --lang zh   # strict pass or repair report
+node dist/cli.js tidy   design.sc.json --fix       # row-model tidy, written back
+node dist/cli.js prompt design.sc.json --lang zh > brief.md
+node dist/cli.js open   design.sc.json             # share link to keep editing
+node dist/cli.js preview design.sc.json --port 4173
+```
+
+Agents can consume the JSON or the brief directly. The planned HTML→SwiftUI translator (CLI `import` + MCP server) is specified in [docs/translator.md](docs/translator.md).
+
 ## Sketches from an AI agent
 
 Read [public/agent.md](public/agent.md): it specifies the JSON document format and how to turn one into a share link, so an agent can sketch a design and hand back the link.

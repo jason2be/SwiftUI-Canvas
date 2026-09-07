@@ -64,6 +64,18 @@ const validTheme = (t: unknown): boolean =>
   (t.shape === "default" || t.shape === "capsule") &&
   (t.font === "system" || t.font === "rounded" || t.font === "serif" || t.font === "monospaced");
 
+/** every part.screen / link.target / option target names a real screen (or back) */
+const refsIntact = (screens: unknown[], parts: unknown[]): boolean => {
+  const ids = new Set(screens.filter(isRecord).map((s) => s.id).filter((id): id is string => typeof id === "string"));
+  const ok = (t: unknown) => t === BACK_TARGET || (typeof t === "string" && ids.has(t));
+  return parts.filter(isRecord).every((p) => {
+    if (p.screen !== null && !ok(p.screen)) return false;
+    if (p.link !== undefined && p.link !== null && !(isRecord(p.link) && ok(p.link.target))) return false;
+    if (Array.isArray(p.options) && !p.options.every((o) => isRecord(o) && (o.target === undefined || o.target === null || ok(o.target)))) return false;
+    return true;
+  });
+};
+
 /** every presents trigger names an alert/sheet on the same screen */
 const presentsIntact = (parts: unknown[]): boolean => {
   const recs = parts.filter(isRecord);
@@ -83,6 +95,7 @@ export const isProject = (v: unknown): v is Doc =>
   v.screens.every(validScreen) &&
   Array.isArray(v.parts) &&
   v.parts.every(validPart) &&
+  refsIntact(v.screens, v.parts) &&
   presentsIntact(v.parts);
 
 export const projectFileName = (doc: Doc) => {

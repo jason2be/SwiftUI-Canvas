@@ -48,8 +48,11 @@ export async function decodeDoc(payload: string): Promise<Doc | null> {
   }
 }
 
-export async function shareLink(doc: Doc): Promise<string> {
-  return `${location.origin}${location.pathname}${PREFIX}${await encodeDoc(doc)}`;
+export async function shareLink(doc: Doc, base?: string): Promise<string> {
+  // Node/CLI callers pass the deployed (or local) URL; in the browser the
+  // current location is the default
+  const origin = base ?? (typeof location === "undefined" ? "https://jason2be.github.io/SwiftUI-Canvas/" : `${location.origin}${location.pathname}`);
+  return `${origin}${PREFIX}${await encodeDoc(doc)}`;
 }
 
 export async function readShareLink(): Promise<Doc | null> {
