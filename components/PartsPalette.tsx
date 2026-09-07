@@ -102,14 +102,14 @@ export default function PartsPalette({ editor, onAdd, placeRef }: { editor: Edit
   // pointer fallback for touch (HTML5 drag does not fire there): track a
   // drag on a palette item and place it where the finger lifts
   const [ghost, setGhost] = useState<{ kind: Kind; x: number; y: number } | null>(null);
-  const pending = useRef<{ kind: Kind; x: number; y: number; moved: boolean; touch: boolean; armed: boolean } | null>(null);
+  const pending = useRef<{ kind: Kind; x: number; y: number; moved: boolean; touch: boolean; armed: boolean; pid: number } | null>(null);
   const suppressClick = useRef(false);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const p = pending.current;
-      if (!p) return;
+      if (!p || e.pointerId !== p.pid) return;
       // touch arms only after a hold: until then the gesture belongs to the
       // panel's native scrolling (pan-y), and cancel cleans up
       if (p.touch && !p.armed) return;
@@ -119,6 +119,7 @@ export default function PartsPalette({ editor, onAdd, placeRef }: { editor: Edit
     };
     const onUp = (e: PointerEvent) => {
       const p = pending.current;
+      if (p && e.pointerId !== p.pid) return; // another finger lifting
       pending.current = null;
       setGhost(null);
       if (holdTimer.current) clearTimeout(holdTimer.current);
@@ -139,12 +140,16 @@ export default function PartsPalette({ editor, onAdd, placeRef }: { editor: Edit
       setGhost(null);
       if (holdTimer.current) clearTimeout(holdTimer.current);
     };
-    const onFirstMove = () => {
-      // any real movement before the hold completes hands the gesture to scroll
+    const onFirstMove = (e: PointerEvent) => {
+      // real movement (past the same jitter the drag uses) before the hold
+      // completes hands the gesture to scroll; pressure-only events do not
+      const p = pending.current;
+      if (!p || e.pointerId !== p.pid || p.armed) return;
+      if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 8) return;
       if (holdTimer.current) {
         clearTimeout(holdTimer.current);
         holdTimer.current = null;
-        if (pending.current && !pending.current.armed) pending.current = null;
+        pending.current = null;
       }
     };
     window.addEventListener("pointermove", onFirstMove, { capture: true, once: false });
@@ -156,7 +161,6 @@ export default function PartsPalette({ editor, onAdd, placeRef }: { editor: Edit
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
-      if (holdTimer.current) clearTimeout(holdTimer.current);
     };
   });
 
@@ -182,7 +186,7 @@ export default function PartsPalette({ editor, onAdd, placeRef }: { editor: Edit
                 }}
                 onPointerDown={(e) => {
                   if (e.pointerType === "mouse") return; // mouse uses HTML5 drag
-                  pending.current = { kind: k, x: e.clientX, y: e.clientY, moved: false, touch: true, armed: false };
+                  pending.current = { kind: k, x: e.clientX, y: e.clientY, moved: false, touch: true, armed: false, pid: e.pointerId };
                   // a 250ms hold picks the item up; earlier movement is scrolling
                   if (holdTimer.current) clearTimeout(holdTimer.current);
                   holdTimer.current = setTimeout(() => {

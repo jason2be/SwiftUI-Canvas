@@ -64,6 +64,16 @@ const validTheme = (t: unknown): boolean =>
   (t.shape === "default" || t.shape === "capsule") &&
   (t.font === "system" || t.font === "rounded" || t.font === "serif" || t.font === "monospaced");
 
+/** every presents trigger names an alert/sheet on the same screen */
+const presentsIntact = (parts: unknown[]): boolean => {
+  const recs = parts.filter(isRecord);
+  return recs.every((p) => {
+    if (p.presents === undefined) return true;
+    if (typeof p.presents !== "string") return false;
+    return recs.some((q) => q.id === p.presents && q.screen === p.screen && (q.kind === "alert" || q.kind === "sheet"));
+  });
+};
+
 export const isProject = (v: unknown): v is Doc =>
   isRecord(v) &&
   typeof v.title === "string" &&
@@ -72,7 +82,8 @@ export const isProject = (v: unknown): v is Doc =>
   Array.isArray(v.screens) &&
   v.screens.every(validScreen) &&
   Array.isArray(v.parts) &&
-  v.parts.every(validPart);
+  v.parts.every(validPart) &&
+  presentsIntact(v.parts);
 
 export const projectFileName = (doc: Doc) => {
   const name = doc.title.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
@@ -209,11 +220,18 @@ export function validateDoc(value: unknown, label = "document", lang: "en" | "zh
       p = { ...p, options: p.options.map((o) => (o.target && o.target !== BACK_TARGET && !ids.has(o.target) ? { ...o, target: null } : o)) };
       warnings.push(msg(lang, "targetRemoved", label, p.id));
     }
-    if (p.presents && !rawParts.some((q) => isRecord(q) && q.id === p.presents && q.screen === p.screen && (q.kind === "alert" || q.kind === "sheet"))) {
-      p = { ...p, presents: undefined };
+    parts.push(p);
+  }
+  // presents must point at an alert/sheet that SURVIVED repair on the same
+  // screen (a raw scan would accept a target dropped earlier in this pass)
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (!p.presents) continue;
+    const ok = parts.some((q) => q.id === p.presents && q.screen === p.screen && (q.kind === "alert" || q.kind === "sheet"));
+    if (!ok) {
+      parts[i] = { ...p, presents: undefined };
       warnings.push(msg(lang, "presentsRemoved", label, p.id));
     }
-    parts.push(p);
   }
   // fields isProject requires, normalized so a repaired doc loads and saves
   // cleanly (projectFileName calls title.trim())
@@ -226,6 +244,7 @@ export function validateDoc(value: unknown, label = "document", lang: "en" | "zh
     parts,
   };
   if (typeof value.title !== "string") warnings.push(msg(lang, "missingTitle", label));
+  if (value.lang !== undefined && value.lang !== "en" && value.lang !== "zh") warnings.push(msg(lang, "unknownLang", label));
   return { doc, errors, warnings };
 }
 

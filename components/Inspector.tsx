@@ -255,7 +255,7 @@ export default function Inspector({ editor, onOpenIcon }: Props) {
                     const from = doc.screens.find((s) => s.id === part.screen);
                     if (v === "__canvas") {
                       if (part.screen === null) return;
-                      patch(part.id, { screen: null, x: (from?.x ?? 0) + part.x, y: (from?.y ?? 0) + part.y });
+                      patch(part.id, { screen: null, x: (from?.x ?? 0) + part.x, y: (from?.y ?? 0) + part.y, presents: undefined });
                     } else {
                       const to = doc.screens.find((s) => s.id === v);
                       if (!to) return;

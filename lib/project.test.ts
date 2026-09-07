@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeDoc, validateDoc } from "./project";
+import { isProject, mergeDoc, validateDoc } from "./project";
 import { duplicateScreen, newDoc, partSize, type Doc } from "./tokens";
 import { paletteOf } from "./theme";
 
@@ -86,6 +86,19 @@ describe("validateDoc", () => {
     expect(zh.warnings[0]).toContain("已移到工作区");
     const en = validateDoc(d, "File", "en");
     expect(en.warnings[0]).toContain("moved to the workspace");
+  });
+
+  it("isProject rejects a presents trigger that crosses screens", () => {
+    const d = base();
+    d.screens.push({ id: "s2", name: "Other", x: 513, y: 0 });
+    d.parts.push(
+      { id: "al", screen: "s1", kind: "alert", x: 60, y: 360, label: "A", variant: "plain" },
+      { id: "b2", screen: "s2", kind: "button", x: 16, y: 220, label: "B", variant: "bordered", presents: "al" },
+    );
+    expect(isProject(d)).toBe(false);
+    // same-screen is fine
+    (d.parts.find((p) => p.id === "b2") as { screen: string }).screen = "s1";
+    expect(isProject(d)).toBe(true);
   });
 
   it("defaults a missing title so the document stays saveable", () => {
