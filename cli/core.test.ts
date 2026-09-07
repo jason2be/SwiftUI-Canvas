@@ -74,6 +74,8 @@ describe("docFromInputReported", () => {
     const strict = await docFromInputReported(JSON.stringify(doc()));
     expect(strict.strict).toBe(true);
     expect(strict.warnings).toHaveLength(0);
+    const zh = await docFromInputReported(JSON.stringify(broken), "zh");
+    expect(zh.warnings.join(" ")).toContain("目标已移除");
   });
 });
 

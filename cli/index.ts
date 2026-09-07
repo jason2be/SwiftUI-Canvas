@@ -76,16 +76,17 @@ async function main(): Promise<number> {
         return 0;
       }
       case "tidy": {
-        const { doc, warnings } = await docFromInputReported(file);
-        if (warnings.length) {
-          out(lang === "zh" ? `⚠ 载入时已修复 ${warnings.length} 处，写回前请检查：` : `⚠ repaired on load (${warnings.length}) — review before writing back:`);
-          for (const w of warnings) out(`  - ${w}`);
-        }
+        const { doc, warnings } = await docFromInputReported(file, lang);
         const { doc: tidied, changed } = tidyDoc(doc, typeof flags.screen === "string" ? flags.screen : undefined);
         if (flags.fix) await writeDocFile(file, tidied);
         if (json) {
-          out(JSON.stringify({ changed, fixed: !!flags.fix, doc: tidied }, null, 2));
+          // machine channel: warnings belong in the payload, never as text
+          out(JSON.stringify({ changed, fixed: !!flags.fix, warnings, doc: tidied }, null, 2));
         } else {
+          if (warnings.length) {
+            out(lang === "zh" ? `⚠ 载入时已修复 ${warnings.length} 处，写回前请检查：` : `⚠ repaired on load (${warnings.length}) — review before writing back:`);
+            for (const w of warnings) out(`  - ${w}`);
+          }
           out(lang === "zh" ? (changed.length ? `✓ 已整理 ${changed.length} 个屏幕${flags.fix ? "，已写回" : "（--fix 写回）"}。` : "无需整理。") : changed.length
             ? `✓ tidied ${changed.length} screen(s)${flags.fix ? ", written back" : " (use --fix to write back)"}.`
             : "nothing to tidy.");
@@ -131,7 +132,11 @@ async function main(): Promise<number> {
       }
       case "preview": {
         const { servePreview } = await import("./serve");
-        const { doc } = await checkDocFile(file, lang);
+        const { doc, warnings, repaired } = await checkDocFile(file, lang);
+        if (repaired && warnings.length) {
+          out(lang === "zh" ? `⚠ 载入时已修复 ${warnings.length} 处（原文件未改动）：` : `⚠ repaired on load (${warnings.length}) — the file itself is untouched:`);
+          for (const w of warnings) out(`  - ${w}`);
+        }
         await servePreview(JSON.stringify(doc), Number(flags.port) || 4173);
         return 0; // servePreview resolves when the process is killed
       }

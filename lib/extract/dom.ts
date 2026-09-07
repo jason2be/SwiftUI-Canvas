@@ -59,12 +59,17 @@ export function parseHtml(html: string): ParsedPage {
   // linkedom is imported lazily so the rest of the extract lib stays pure
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { parseHTML } = require("linkedom") as { parseHTML: (s: string) => { document: { querySelectorAll: (s: string) => RawEl[]; querySelector: (s: string) => RawEl | null; body: RawEl; documentElement: RawEl | null; title: string } } };
-  // linkedom only synthesizes <head>/<body> when the input looks like a full
-  // document; for a bare fragment it makes the FIRST ELEMENT the
-  // documentElement (with empty head/body inside), dropping everything after
-  // it. Wrap fragments so the content always lands in a real <body>.
-  const looksLikeDoc = /<!doctype|<html[\s>]/i.test(html);
-  const { document } = parseHTML(looksLikeDoc ? html : `<!doctype html><html><body>${html}</body></html>`);
+  // Decide on STRUCTURE, not text: a raw-text sniff for "<html" misdetects
+  // comments, scripts and attribute values that merely contain it. linkedom
+  // yields an <html> documentElement only for real documents; for any other
+  // input it makes the FIRST ELEMENT the documentElement (with empty
+  // synthetic head/body inside), which silently hides everything after it —
+  // so re-wrap unless the parse actually produced an html root.
+  const parse = (src: string) => parseHTML(src).document;
+  let document = parse(html);
+  const docEl = document.documentElement ?? null;
+  const realDoc = docEl !== null && String(docEl.tagName ?? "").toLowerCase() === "html";
+  if (!realDoc) document = parse(`<!doctype html><html><body>${html}</body></html>`);
   const body = document.body ?? document.querySelector("body");
   const root = body ?? document.documentElement ?? body;
   const links = Array.from(document.querySelectorAll("a[href]")).map((a) => ({ href: a.getAttribute("href") ?? "", text: (a.textContent ?? "").replace(/\s+/g, " ").trim() }));

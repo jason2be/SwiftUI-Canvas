@@ -140,6 +140,29 @@ describe("extractPage end-to-end", () => {
     expect(frag.doc.parts.some((p) => p.label === "Tea House")).toBe(true);
     expect(frag.doc.parts.some((p) => p.label === "Fresh brews daily")).toBe(true);
   });
+  it("does not mistake markup literals for document structure", () => {
+    // a "<html>" inside a comment, a script, or an attribute value must not
+    // stop the fragment from being wrapped (round-2 blocker regression)
+    const cases = [
+      '<h1>Alpha</h1><!-- <html> old markup --><p>Beta</p><ul><li>one</li><li>two</li></ul>',
+      '<!-- <html lang="en"> --><h1>Alpha</h1><p>Beta</p><ul><li>one</li><li>two</li></ul>',
+      '<script>document.write("<html>");</script><h1>Alpha</h1><p>Beta</p><ul><li>one</li><li>two</li></ul>',
+      '<div data-tpl="<html><body>x</body></html>"></div><h1>Alpha</h1><p>Beta</p><ul><li>one</li><li>two</li></ul>',
+      '<div>Alpha</div><html><body><div>Beta</div></body></html>',
+    ];
+    for (const [i, src] of cases.entries()) {
+      const r = extractPage(src, { name: `C${i}` });
+      const labels = r.doc.parts.map((p) => p.label);
+      expect(labels.some((l) => l.includes("Alpha")), `case ${i}: ${src}`).toBe(true);
+      expect(labels.some((l) => l.includes("Beta")), `case ${i}: ${src}`).toBe(true);
+      if (i < 4) expect(r.doc.parts.some((p) => p.kind === "list"), `case ${i}: list`).toBe(true);
+    }
+  });
+  it("keeps the title of a real document unwrapped", () => {
+    const real = extractPage("<!doctype html><html><head><title>Real Doc</title></head><body><p>Hello</p></body></html>");
+    expect(real.doc.title).toBe("Real Doc");
+    expect(real.doc.parts.map((p) => p.label)).toContain("Hello");
+  });
   it("the draft survives the tolerant loader untouched", () => {
     const v = validateDoc(JSON.parse(JSON.stringify(r.doc)), "test");
     expect(v.doc).not.toBeNull();

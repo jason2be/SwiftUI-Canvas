@@ -82,14 +82,14 @@ const TOOLS: ToolDef[] = [
 ];
 
 /** accept an object, a JSON string, or a file path — with repair warnings */
-async function docFromUnknownReported(value: unknown): Promise<{ doc: Doc; warnings: string[] }> {
+async function docFromUnknownReported(value: unknown, lang: Lang = "en"): Promise<{ doc: Doc; warnings: string[] }> {
   if (value && typeof value === "object") {
     if (isProject(value)) return { doc: value, warnings: [] };
-    const v = validateDoc(value, "document");
+    const v = validateDoc(value, "document", lang);
     if (v.doc) return { doc: v.doc, warnings: v.warnings };
     throw new Error(v.errors.join("; "));
   }
-  if (typeof value === "string") return docFromInputReported(value);
+  if (typeof value === "string") return docFromInputReported(value, lang);
   throw new Error("doc must be an object, a JSON string, or a file path");
 }
 
@@ -156,7 +156,7 @@ export async function callTool(name: string, args: Json): Promise<{ content: { t
         };
       }
       case "tidy_doc": {
-        const { doc, warnings } = await docFromUnknownReported(args.doc);
+        const { doc, warnings } = await docFromUnknownReported(args.doc, lang);
         const r = tidyDoc(doc, typeof args.screenId === "string" ? args.screenId : undefined);
         return { content: [{ type: "text", text: JSON.stringify({ ...r, warnings }, null, 2) }] };
       }

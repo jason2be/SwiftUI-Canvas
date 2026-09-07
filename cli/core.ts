@@ -72,11 +72,11 @@ export async function writeDocFile(path: string, doc: Doc): Promise<void> {
 /** load a Doc from a file path or a raw JSON string, WITHOUT hiding repairs:
  *  callers that write the document back (tidy --fix) must surface the
  *  warnings, so repairs are never silent */
-export async function docFromInputReported(input: string): Promise<{ doc: Doc; warnings: string[]; strict: boolean }> {
+export async function docFromInputReported(input: string, lang: Lang = "en"): Promise<{ doc: Doc; warnings: string[]; strict: boolean }> {
   const text = input.trim().startsWith("{") ? input : await readFile(input, "utf8");
   const parsed: unknown = JSON.parse(text);
   if (isProject(parsed)) return { doc: parsed, warnings: [], strict: true };
-  const v = validateDoc(parsed, "document");
+  const v = validateDoc(parsed, "document", lang);
   if (v.doc) return { doc: v.doc, warnings: v.warnings, strict: false };
   throw new Error(v.errors.join("; ") || "unrecognizable document");
 }
