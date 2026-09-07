@@ -1,5 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { isProject, saveProject, validateDoc, type Validated } from "../lib/project";
+import { extractPage } from "../lib/extract/extract";
+import type { Extraction } from "../lib/extract/report";
 import type { Part } from "../lib/tokens";
 import { buildPrompt, type PromptScope } from "../lib/prompt";
 import { shareLink } from "../lib/share";
@@ -88,3 +90,19 @@ export async function docFromInput(input: string): Promise<Doc> {
 
 export { saveProject };
 export type { Screen };
+
+/** import: HTML (url, file path, or raw html string) → draft doc + report */
+export async function importHtml(source: string, opts: { lang?: Lang; name?: string; fetchHtml?: (url: string) => Promise<string> } = {}): Promise<Extraction> {
+  const lang = opts.lang;
+  let html: string;
+  let name = opts.name;
+  if (/^https?:\/\//i.test(source)) {
+    html = opts.fetchHtml ? await opts.fetchHtml(source) : await (await fetch(source)).text();
+  } else if (/^\s*</.test(source)) {
+    html = source;
+  } else {
+    html = await readFile(source, "utf8");
+    if (!name) name = source.replace(/\\.[^.]*$/, "").split(/[\\/]/).pop();
+  }
+  return extractPage(html, { lang, name });
+}

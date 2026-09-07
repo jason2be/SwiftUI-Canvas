@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { argv, exit, stdout } from "node:process";
-import { checkDocFile, docFromInput, tidyDoc, buildPromptForDoc, openLink, writeDocFile, readDocFile, type Lang } from "./core";
+import { checkDocFile, docFromInput, tidyDoc, buildPromptForDoc, openLink, writeDocFile, readDocFile, importHtml, type Lang } from "./core";
 import type { PromptScope } from "../lib/prompt";
 
 /* The swiftui-canvas binary. Thin: parses argv, calls cli/core.ts functions,
@@ -10,6 +10,7 @@ import type { PromptScope } from "../lib/prompt";
 const USAGE = `swiftui-canvas — sketch SwiftUI screens anywhere, brief any agent
 
 Usage:
+  swiftui-canvas import <page.html|https://…> [-o draft.sc.json] [--lang zh|en] [--name X] [--json]
   swiftui-canvas check <file.sc.json> [--lang zh|en] [--json]
   swiftui-canvas tidy <file.sc.json> [--screen <id>] [--fix] [--json]
   swiftui-canvas prompt <file.sc.json> [--screen <id>] [--lang zh|en]
@@ -24,10 +25,10 @@ function parseArgs(args: string[]): { pos: string[]; flags: Record<string, strin
   const flags: Record<string, string | boolean> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a.startsWith("--")) {
-      const key = a.slice(2);
+    if (a.startsWith("-")) {
+      const key = a.replace(/^-+/, "");
       const next = args[i + 1];
-      if (next !== undefined && !next.startsWith("--")) {
+      if (next !== undefined && !next.startsWith("-")) {
         flags[key] = next;
         i++;
       } else {
@@ -101,6 +102,27 @@ async function main(): Promise<number> {
       case "open": {
         const doc = await readDocFile(file);
         out(await openLink(doc, typeof flags.base === "string" ? flags.base : undefined));
+        return 0;
+      }
+      case "import": {
+        const src = pos[0];
+        if (!src) {
+          out(USAGE);
+          return 2;
+        }
+        const r = await importHtml(src, { lang, name: typeof flags.name === "string" ? flags.name : undefined });
+        const outFile = typeof flags.o === "string" ? flags.o : "draft.sc.json";
+        await writeDocFile(outFile, r.doc);
+        if (json) {
+          out(JSON.stringify(r, null, 2));
+        } else {
+          out(lang === "zh" ? `✓ 草稿已写入 ${outFile}（${r.doc.screens.length} 屏，${r.doc.parts.length} 组件）` : `✓ draft written to ${outFile} (${r.doc.screens.length} screen(s), ${r.doc.parts.length} part(s))`);
+          if (r.decisions.length) {
+            out(lang === "zh" ? "决策（●高 ◐中 ○低置信度）：" : "decisions (●high ◐medium ○low):");
+            for (const d of r.decisions.slice(0, 30)) out(`  ${d.confidence === "high" ? "●" : d.confidence === "medium" ? "◐" : "○"} ${d.decision} — ${d.reason}`);
+          }
+          for (const n of r.notes) out(lang === "zh" ? `  注：${n}` : `  note: ${n}`);
+        }
         return 0;
       }
       case "preview": {
