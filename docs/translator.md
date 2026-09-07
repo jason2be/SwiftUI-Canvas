@@ -1,6 +1,6 @@
 # HTML → SwiftUI 翻译管线：CLI + MCP 规划
 
-> 状态：规划。目标：让任何成熟 HTML 网页项目能被外部 Agent「翻译」为 SwiftUI iOS App，
+> 状态：M1（CLI check/tidy/prompt/preview/open）、M2（规则提取器 + import）、M3（MCP 服务器）已实现；M4（多页站点切屏）待做。目标：让任何成熟 HTML 网页项目能被外部 Agent「翻译」为 SwiftUI iOS App，
 > 以 SwiftUI-Canvas 的 Doc JSON 为中间表示（IR），人工/Agent 都能在画布上继续编辑。
 
 ## 0. 核心洞察：产品已经有了一个完美的 IR
@@ -133,10 +133,10 @@ CLI 不内置 LLM 调用。`--refine` 输出一份「提升任务书」：
 
 | 阶段 | 内容 | 验收 |
 |---|---|---|
-| M1 | CLI 骨架：check/tidy/prompt/preview/open（纯复用现有 lib） | 5 个子命令 + 测试；`npx swiftui-canvas check` 可用 |
-| M2 | 规则提取器 v1：segment + 常用 10 个 mapper + style/icons | 对 3 个真实落地页出草稿，Preview 可看 |
-| M3 | MCP 服务器 + `import_html` 等 5 工具 | Claude Code 实测端到端：URL → SwiftUI 工程 |
-| M4 | 提升轮报告格式打磨 + 多页站点切屏 | 5+ 页站点导航图正确 |
+| M1 ✅ | CLI 骨架：check/tidy/prompt/preview/open（纯复用现有 lib） | 5 个子命令 + 测试；`node dist/cli.js` 可用 |
+| M2 ✅ | 规则提取器 v1：segment + 元素 mapper + 内联样式主题 + 置信度报告 | 草稿通过 isProject；`import` 子命令 + `--json` |
+| M3 ✅ | MCP 服务器（stdio JSON-RPC）+ `import_html` 等 5 工具 | `node dist/mcp.js`；协议与工具 16 测试 |
+| M4 | 提升轮报告格式打磨 + 多页站点切屏（多页 → 多屏 + 导航链接） | 5+ 页站点导航图正确 |
 
 M1 约是现有 lib 的薄壳（1-2 天量级）；M2 是真正的新代码（提取器核心）；
 M3 是薄壳；M4 打磨。顺序保证每一步都可发布、可单独使用。

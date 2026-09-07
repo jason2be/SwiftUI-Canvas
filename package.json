@@ -13,7 +13,8 @@
     "test": "vitest run",
     "build:cli": "esbuild cli/index.ts --bundle --platform=node --format=esm --outfile=dist/cli.js && chmod +x dist/cli.js",
     "build:cli:watch": "esbuild cli/index.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --banner:js=\"#!/usr/bin/env node\" --watch",
-    "pretest": "npm run typecheck"
+    "pretest": "npm run typecheck",
+    "build:mcp": "esbuild mcp/server.ts --bundle --platform=node --format=esm --outfile=dist/mcp.js --define:__MCP_ENTRY__=true"
   },
   "dependencies": {
     "lucide-react": "^1.41.0",
@@ -35,7 +36,8 @@
   "description": "Sketch SwiftUI screens in the browser and turn them into vibe-coding prompts.",
   "license": "MIT",
   "bin": {
-    "swiftui-canvas": "./dist/cli.js"
+    "swiftui-canvas": "./dist/cli.js",
+    "swiftui-canvas-mcp": "./dist/mcp.js"
   },
   "type": "module"
 }

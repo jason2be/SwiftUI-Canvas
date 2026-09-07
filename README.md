@@ -86,6 +86,23 @@ node dist/cli.js preview design.sc.json --port 4173
 
 Agents can consume the JSON or the brief directly. The planned HTML→SwiftUI translator (CLI `import` + MCP server) is specified in [docs/translator.md](docs/translator.md).
 
+## MCP server
+
+```bash
+npm run build:mcp
+node dist/mcp.js            # stdio, newline-delimited JSON-RPC
+```
+
+Register it in any MCP host (e.g. Claude Code: `claude mcp add swiftui-canvas -- node /path/to/dist/mcp.js`). Five tools, all over the same document format:
+
+- `import_html` — a URL, file, or raw HTML becomes a draft document with a decision report (●high ◐medium ○low confidence).
+- `check_doc` — strict validation or the tolerant repair with warnings.
+- `tidy_doc` — row-model tidy across screens.
+- `build_prompt` — the SwiftUI implementation brief (iOS 26/27 baseline, zh/en).
+- `open_preview` — a share link that opens the design in the editor.
+
+The planned full translator (batch CLI + refinement loop) is specified in [docs/translator.md](docs/translator.md).
+
 ## Sketches from an AI agent
 
 Read [public/agent.md](public/agent.md): it specifies the JSON document format and how to turn one into a share link, so an agent can sketch a design and hand back the link.
