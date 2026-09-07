@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { argv, exit, stdout } from "node:process";
-import { checkDocFile, docFromInput, tidyDoc, buildPromptForDoc, openLink, writeDocFile, readDocFile, importHtml, type Lang } from "./core";
+import { checkDocFile, docFromInput, docFromInputReported, tidyDoc, buildPromptForDoc, openLink, writeDocFile, readDocFile, importHtml, type Lang } from "./core";
 import type { PromptScope } from "../lib/prompt";
 
 /* The swiftui-canvas binary. Thin: parses argv, calls cli/core.ts functions,
@@ -76,7 +76,11 @@ async function main(): Promise<number> {
         return 0;
       }
       case "tidy": {
-        const doc = await docFromInput(file);
+        const { doc, warnings } = await docFromInputReported(file);
+        if (warnings.length) {
+          out(lang === "zh" ? `⚠ 载入时已修复 ${warnings.length} 处，写回前请检查：` : `⚠ repaired on load (${warnings.length}) — review before writing back:`);
+          for (const w of warnings) out(`  - ${w}`);
+        }
         const { doc: tidied, changed } = tidyDoc(doc, typeof flags.screen === "string" ? flags.screen : undefined);
         if (flags.fix) await writeDocFile(file, tidied);
         if (json) {

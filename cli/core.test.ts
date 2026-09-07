@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { mkdtemp, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkDocFile, docFromInput, tidyDoc, buildPromptForDoc, openLink, writeDocFile } from "./core";
+import { checkDocFile, docFromInput, docFromInputReported, tidyDoc, buildPromptForDoc, openLink, writeDocFile } from "./core";
 import { startServer, handlerFor, detectBase } from "./serve";
 import type { Doc } from "../lib/tokens";
 
@@ -60,6 +60,20 @@ describe("docFromInput", () => {
     await writeFile(file, JSON.stringify(doc()));
     const fromFile = await docFromInput(file);
     expect(fromFile.screens).toHaveLength(2);
+  });
+});
+
+describe("docFromInputReported", () => {
+  it("surfaces repair warnings instead of applying them silently", async () => {
+    const broken = doc();
+    (broken.parts[0].options![0] as { target: string }).target = "ghost";
+    const r = await docFromInputReported(JSON.stringify(broken));
+    expect(r.strict).toBe(false);
+    expect(r.warnings.join(" ")).toMatch(/removed|dropped/i);
+    expect(JSON.stringify(r.doc)).not.toContain("ghost");
+    const strict = await docFromInputReported(JSON.stringify(doc()));
+    expect(strict.strict).toBe(true);
+    expect(strict.warnings).toHaveLength(0);
   });
 });
 

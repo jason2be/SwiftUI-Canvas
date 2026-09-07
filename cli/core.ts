@@ -15,14 +15,7 @@ import { type Doc, type Screen } from "../lib/tokens";
 export type Lang = "en" | "zh";
 
 export async function readDocFile(path: string): Promise<Doc> {
-  const text = await readFile(path, "utf8");
-  const parsed: unknown = JSON.parse(text);
-  if (isProject(parsed)) return parsed;
-  // the same tolerant path the editor uses on open: repair what we can, and
-  // let the caller print the report
-  const v = validateDoc(parsed, path);
-  if (v.doc) return v.doc;
-  throw new Error(`${path}: ${v.errors.join("; ") || "unrecognizable document"}`);
+  return docFromInput(path);
 }
 
 /** check: validate + tolerant repair; returns the report and (possibly
@@ -76,16 +69,21 @@ export async function writeDocFile(path: string, doc: Doc): Promise<void> {
   await writeFile(path, JSON.stringify(doc, null, 2) + "\n", "utf8");
 }
 
-/** load a Doc from a file path or a raw JSON string (MCP tools pass strings) */
+/** load a Doc from a file path or a raw JSON string, WITHOUT hiding repairs:
+ *  callers that write the document back (tidy --fix) must surface the
+ *  warnings, so repairs are never silent */
+export async function docFromInputReported(input: string): Promise<{ doc: Doc; warnings: string[]; strict: boolean }> {
+  const text = input.trim().startsWith("{") ? input : await readFile(input, "utf8");
+  const parsed: unknown = JSON.parse(text);
+  if (isProject(parsed)) return { doc: parsed, warnings: [], strict: true };
+  const v = validateDoc(parsed, "document");
+  if (v.doc) return { doc: v.doc, warnings: v.warnings, strict: false };
+  throw new Error(v.errors.join("; ") || "unrecognizable document");
+}
+
+/** load a Doc from a file path or a raw JSON string (repairs applied silently) */
 export async function docFromInput(input: string): Promise<Doc> {
-  if (input.trim().startsWith("{")) {
-    const parsed: unknown = JSON.parse(input);
-    if (isProject(parsed)) return parsed;
-    const v = validateDoc(parsed, "document");
-    if (v.doc) return v.doc;
-    throw new Error(v.errors.join("; "));
-  }
-  return readDocFile(input);
+  return (await docFromInputReported(input)).doc;
 }
 
 export { saveProject };

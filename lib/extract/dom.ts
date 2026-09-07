@@ -59,11 +59,14 @@ export function parseHtml(html: string): ParsedPage {
   // linkedom is imported lazily so the rest of the extract lib stays pure
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { parseHTML } = require("linkedom") as { parseHTML: (s: string) => { document: { querySelectorAll: (s: string) => RawEl[]; querySelector: (s: string) => RawEl | null; body: RawEl; documentElement: RawEl | null; title: string } } };
-  const { document } = parseHTML(html);
-  // linkedom builds a <body> for full documents; bare fragments land directly
-  // under the document, so pick whichever root actually holds the content
+  // linkedom only synthesizes <head>/<body> when the input looks like a full
+  // document; for a bare fragment it makes the FIRST ELEMENT the
+  // documentElement (with empty head/body inside), dropping everything after
+  // it. Wrap fragments so the content always lands in a real <body>.
+  const looksLikeDoc = /<!doctype|<html[\s>]/i.test(html);
+  const { document } = parseHTML(looksLikeDoc ? html : `<!doctype html><html><body>${html}</body></html>`);
   const body = document.body ?? document.querySelector("body");
-  const root = body && (body.childNodes ?? []).some((n) => n.tagName) ? body : document.documentElement ?? body;
+  const root = body ?? document.documentElement ?? body;
   const links = Array.from(document.querySelectorAll("a[href]")).map((a) => ({ href: a.getAttribute("href") ?? "", text: (a.textContent ?? "").replace(/\s+/g, " ").trim() }));
   return { root: wrapEl(root), title: (document.title ?? "").trim(), links };
 }

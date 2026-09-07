@@ -130,6 +130,16 @@ describe("extractPage end-to-end", () => {
   it("skips the site footer with a note", () => {
     expect(r.notes.join(" ")).toMatch(/footer/);
   });
+  it("handles a bare fragment (no html/body tags) without losing elements", () => {
+    const frag = extractPage("<h1>Tea House</h1><p>Fresh brews daily</p><ul><li>Jasmine</li><li>Oolong</li></ul>", { name: "Tea" });
+    const kinds = frag.doc.parts.map((p) => p.kind);
+    expect(kinds).toContain("text");
+    expect(kinds).toContain("list");
+    const list = frag.doc.parts.find((p) => p.kind === "list")!;
+    expect(list.options).toHaveLength(2);
+    expect(frag.doc.parts.some((p) => p.label === "Tea House")).toBe(true);
+    expect(frag.doc.parts.some((p) => p.label === "Fresh brews daily")).toBe(true);
+  });
   it("the draft survives the tolerant loader untouched", () => {
     const v = validateDoc(JSON.parse(JSON.stringify(r.doc)), "test");
     expect(v.doc).not.toBeNull();

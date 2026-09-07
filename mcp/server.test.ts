@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { handleMessage, callTool, runMcpServer, toolsList } from "./server";
 import { Readable } from "node:stream";
+import { PassThrough } from "node:stream";
 import type { Doc } from "../lib/tokens";
 
 const doc = (): Doc => ({
@@ -48,6 +49,33 @@ describe("protocol", () => {
     const result = (res as { result: { isError: boolean; content: { text: string }[] } }).result;
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/theme|not/i);
+  });
+  it("decodes utf-8 characters split across pipe chunk boundaries", async () => {
+    const out: string[] = [];
+    const doc = { title: "茶馆", lang: "zh", platform: "ios", theme: { accent: "systemBlue", scheme: "light", shape: "default", font: "system" }, screens: [{ id: "a", name: "首页", x: 0, y: 0 }], parts: [] };
+    const frame = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "check_doc", arguments: { doc } } }) + "\n";
+    const bytes = Buffer.from(frame, "utf8");
+    // split inside the 3-byte 茶 sequence
+    const splitAt = bytes.indexOf(Buffer.from("茶", "utf8")) + 1;
+    const a = new PassThrough();
+    const done = runMcpServer(a, (s) => out.push(s));
+    a.write(bytes.subarray(0, splitAt));
+    a.write(bytes.subarray(splitAt));
+    a.end();
+    await done;
+    const res = JSON.parse(out.join(""));
+    const parsed = JSON.parse(res.result.content[0].text);
+    expect(parsed.doc.title).toBe("茶馆");
+  });
+  it("resolves only after in-flight handlers finish when stdin closes", async () => {
+    const out: string[] = [];
+    const a = new PassThrough();
+    const done = runMcpServer(a, (s) => out.push(s));
+    a.write('{"jsonrpc":"2.0","id":1,"method":"tools/list"}\n');
+    a.end();
+    await done;
+    // the response must already be on the wire when the promise resolves
+    expect(JSON.parse(out.join("").trim()).result.tools).toHaveLength(5);
   });
   it("rejects malformed json frames with a parse error", async () => {
     const out: string[] = [];

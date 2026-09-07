@@ -1,4 +1,5 @@
-import { checkDocFile, tidyDoc, buildPromptForDoc, openLink, importHtml, docFromInput, type Lang } from "../cli/core";
+import { StringDecoder } from "node:string_decoder";
+import { checkDocFile, tidyDoc, buildPromptForDoc, openLink, importHtml, docFromInput, docFromInputReported, type Lang } from "../cli/core";
 import { isProject, validateDoc } from "../lib/project";
 import type { Doc } from "../lib/tokens";
 
@@ -80,16 +81,21 @@ const TOOLS: ToolDef[] = [
   },
 ];
 
-/** accept an object, a JSON string, or a file path */
-async function docFromUnknown(value: unknown): Promise<Doc> {
+/** accept an object, a JSON string, or a file path — with repair warnings */
+async function docFromUnknownReported(value: unknown): Promise<{ doc: Doc; warnings: string[] }> {
   if (value && typeof value === "object") {
-    if (isProject(value)) return value;
+    if (isProject(value)) return { doc: value, warnings: [] };
     const v = validateDoc(value, "document");
-    if (v.doc) return v.doc;
+    if (v.doc) return { doc: v.doc, warnings: v.warnings };
     throw new Error(v.errors.join("; "));
   }
-  if (typeof value === "string") return docFromInput(value);
+  if (typeof value === "string") return docFromInputReported(value);
   throw new Error("doc must be an object, a JSON string, or a file path");
+}
+
+/** accept an object, a JSON string, or a file path (repairs applied silently) */
+async function docFromUnknown(value: unknown): Promise<Doc> {
+  return (await docFromUnknownReported(value)).doc;
 }
 
 /** the raw value behind a doc argument, without any repair */
@@ -150,9 +156,9 @@ export async function callTool(name: string, args: Json): Promise<{ content: { t
         };
       }
       case "tidy_doc": {
-        const doc = await docFromUnknown(args.doc);
+        const { doc, warnings } = await docFromUnknownReported(args.doc);
         const r = tidyDoc(doc, typeof args.screenId === "string" ? args.screenId : undefined);
-        return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
+        return { content: [{ type: "text", text: JSON.stringify({ ...r, warnings }, null, 2) }] };
       }
       case "build_prompt": {
         const doc = await docFromUnknown(args.doc);
@@ -213,32 +219,61 @@ export async function handleMessage(msg: Json): Promise<Json | null> {
   }
 }
 
-/** run the stdio loop over any duplex pair (testable without a real tty) */
+const MAX_FRAME = 1_000_000; // 1 MB is far beyond any real document frame
+
+/** run the stdio loop over any duplex pair (testable without a real tty).
+ *  Chunks are decoded with a StringDecoder so a multi-byte UTF-8 character
+  * split across a pipe boundary survives; responses are awaited before the
+  * stream ends, so closing stdin after the last request cannot lose them. */
 export function runMcpServer(input: NodeJS.ReadableStream, write: (s: string) => void): Promise<void> {
   return new Promise((resolve) => {
+    const decoder = new StringDecoder("utf8");
     let buffer = "";
+    let ended = false;
+    const pending = new Set<Promise<void>>();
+    const maybeFinish = () => {
+      if (ended && pending.size === 0) resolve();
+    };
+    const handleFrame = (line: string) => {
+      if (!line) return;
+      const task = (async () => {
+        let msg: Json;
+        try {
+          msg = JSON.parse(line) as Json;
+        } catch {
+          write(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } }) + "\n");
+          return;
+        }
+        const res = await handleMessage(msg);
+        if (res) write(JSON.stringify(res) + "\n");
+      })();
+      pending.add(task);
+      void task.catch(() => {}).finally(() => {
+        pending.delete(task);
+        maybeFinish();
+      });
+    };
     input.on("data", (chunk: Buffer | string) => {
-      buffer += chunk.toString();
+      buffer += typeof chunk === "string" ? chunk : decoder.write(chunk);
+      if (buffer.length > MAX_FRAME) {
+        write(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "frame too large" } }) + "\n");
+        buffer = "";
+      }
       let nl: number;
       while ((nl = buffer.indexOf("\n")) >= 0) {
-        const line = buffer.slice(0, nl).trim();
+        handleFrame(buffer.slice(0, nl).trim());
         buffer = buffer.slice(nl + 1);
-        if (!line) continue;
-        void (async () => {
-          let msg: Json;
-          try {
-            msg = JSON.parse(line) as Json;
-          } catch {
-            write(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } }) + "\n");
-            return;
-          }
-          const res = await handleMessage(msg);
-          if (res) write(JSON.stringify(res) + "\n");
-        })();
       }
     });
-    input.on("end", () => resolve());
-    input.on("error", () => resolve());
+    const finish = () => {
+      buffer += decoder.end();
+      if (buffer.trim()) handleFrame(buffer.trim()); // frame without trailing newline
+      buffer = "";
+      ended = true;
+      maybeFinish();
+    };
+    input.on("end", finish);
+    input.on("error", finish);
   });
 }
 
