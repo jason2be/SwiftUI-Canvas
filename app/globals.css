@@ -551,6 +551,91 @@ body {
   background: var(--panel-3);
 }
 
+/* canvas appearance prefs (gear in the zoom HUD) */
+.canvas-prefs-anchor {
+  position: relative;
+  display: flex;
+}
+
+.canvas-prefs {
+  position: absolute;
+  right: 0;
+  bottom: 34px;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  z-index: 40;
+}
+
+.prefs-title {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.prefs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: default;
+}
+
+.prefs-seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.prefs-seg button {
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+
+.prefs-seg button.on {
+  background: var(--panel-3);
+  color: var(--text-1);
+}
+
+/* light canvas surface: same dot grid, inverted */
+.canvas-host.prefs-light {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.09) 1px, transparent 1.5px) 0 0 / 24px 24px,
+    #e8e8ee;
+}
+
+.canvas-host.prefs-light .canvas-empty {
+  color: #555;
+}
+
+/* a light chip behind workspace parts (opt-in) so transparent parts with
+ * dark text stay readable on the dark canvas */
+.canvas-host.prefs-backdrop .part-wrap.canvas-part::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+.canvas-host.prefs-light.prefs-backdrop .part-wrap.canvas-part::before {
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 .zoom-num {
   align-self: center;
   padding: 0 8px;

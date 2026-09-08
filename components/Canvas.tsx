@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getT, KIND_TEXT, type Lang } from "@/lib/i18n";
+import { loadCanvasPrefs, saveCanvasPrefs, DEFAULT_PREFS, type CanvasPrefs } from "@/lib/canvasPrefs";
 import { paletteOf } from "@/lib/theme";
 import {
   BACK_TARGET,
@@ -58,6 +59,21 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
   const pal = useMemo(() => paletteOf(doc.theme), [doc.theme]);
   const hostRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>({ x: 60, y: 60, z: 0.7 });
+  // prefs are read AFTER mount: the canvas is server-prerendered, and reading
+  // storage during render diverges from the SSR HTML — React 19 does not
+  // patch attribute mismatches, so the class would stay the server value.
+  // One dark first frame, then the saved surface applies. The loaded flag
+  // keeps the save effect from writing defaults over the stored value.
+  const [prefs, setPrefs] = useState<CanvasPrefs>(DEFAULT_PREFS);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  useEffect(() => {
+    setPrefs(loadCanvasPrefs());
+    setPrefsLoaded(true);
+  }, []);
+  useEffect(() => {
+    if (prefsLoaded) saveCanvasPrefs(prefs);
+  }, [prefs, prefsLoaded]);
   const viewRef = useRef(view);
   viewRef.current = view;
   const [space, setSpace] = useState(false);
@@ -102,6 +118,25 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // middle button pans from anywhere: capture phase beats the part/screen
+  // handlers' stopPropagation, and preventDefault stops the browser's
+  // autoscroll cursor before it starts
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const onMiddle = (e: PointerEvent) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const v = viewRef.current;
+      drag.current = { mode: "pan", sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y };
+      setMarquee(null);
+      el.setPointerCapture?.(e.pointerId);
+    };
+    el.addEventListener("pointerdown", onMiddle, true);
+    return () => el.removeEventListener("pointerdown", onMiddle, true);
   }, []);
 
   // space held => temporary hand
@@ -469,7 +504,7 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
   return (
     <div
       ref={hostRef}
-      className="canvas-host"
+      className={`canvas-host${prefs.bg === "light" ? " prefs-light" : ""}${prefs.backdrop ? " prefs-backdrop" : ""}`}
       style={{ cursor }}
       onPointerDown={onBackgroundDown}
       onPointerMove={onPointerMove}
@@ -659,6 +694,32 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
         <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(-1)} title={t("zoom.out")} aria-label={t("zoom.out")}><Icon name="minus.magnifyingglass" size={15} /></button>
         <button onClick={() => (hostRef.current as (HTMLDivElement & { __zoom?: (d: number) => void }) | null)?.__zoom?.(0)} title={t("zoom.fit")} aria-label={t("zoom.fit")}><Icon name="arrow.up.left.and.arrow.down.right" size={15} /></button>
         <ZoomLevel z={view.z} lang={lang} onPick={(z) => (hostRef.current as (HTMLDivElement & { __zoomTo?: (z: number) => void }) | null)?.__zoomTo?.(z)} />
+        <div className="canvas-prefs-anchor">
+          <button
+            onClick={() => setPrefsOpen((v) => !v)}
+            title={t("canvas.settings")}
+            aria-label={t("canvas.settings")}
+            aria-expanded={prefsOpen}
+          >
+            <Icon name="gearshape" size={15} />
+          </button>
+          {prefsOpen && (
+            <div className="canvas-prefs" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="prefs-title">{t("canvas.settings")}</div>
+              <div className="prefs-row">
+                <span>{t("canvas.bg")}</span>
+                <div className="prefs-seg" role="group" aria-label={t("canvas.bg")}>
+                  <button className={prefs.bg === "dark" ? "on" : ""} onClick={() => setPrefs({ ...prefs, bg: "dark" })}>{t("canvas.bgDark")}</button>
+                  <button className={prefs.bg === "light" ? "on" : ""} onClick={() => setPrefs({ ...prefs, bg: "light" })}>{t("canvas.bgLight")}</button>
+                </div>
+              </div>
+              <label className="prefs-row">
+                <span>{t("canvas.backdrop")}</span>
+                <input type="checkbox" checked={prefs.backdrop} onChange={(e) => setPrefs({ ...prefs, backdrop: e.target.checked })} />
+              </label>
+            </div>
+          )}
+        </div>
       </div>
       {doc.screens.length === 0 ? <div className="canvas-empty">{t("screen.empty")}</div> : null}
     </div>
