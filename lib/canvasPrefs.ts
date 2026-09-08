@@ -14,6 +14,8 @@ export const DEFAULT_PREFS: CanvasPrefs = { bg: "dark", backdrop: false };
 
 const KEY = "swiftui-canvas.canvas.v1";
 
+/** repairs unknown values to defaults; the repaired object is persisted
+ *  again by the save effect (self-heal), keeping store and state in step */
 export function normalizeCanvasPrefs(value: unknown): CanvasPrefs {
   if (!value || typeof value !== "object") return { ...DEFAULT_PREFS };
   const v = value as Record<string, unknown>;

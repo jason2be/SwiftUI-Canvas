@@ -74,6 +74,24 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
   useEffect(() => {
     if (prefsLoaded) saveCanvasPrefs(prefs);
   }, [prefs, prefsLoaded]);
+  // the popover closes on Escape and on any press outside the gear area
+  useEffect(() => {
+    if (!prefsOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPrefsOpen(false);
+    };
+    const onDown = (e: PointerEvent) => {
+      const host = hostRef.current;
+      if (!host?.contains(e.target as Node)) return;
+      if (!(e.target as HTMLElement).closest?.(".canvas-prefs-anchor")) setPrefsOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown, true);
+    };
+  }, [prefsOpen]);
   const viewRef = useRef(view);
   viewRef.current = view;
   const [space, setSpace] = useState(false);
@@ -104,6 +122,13 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      const d = drag.current;
+      if (d?.mode === "pan") {
+        // a wheel adjustment during a pan drag must not be rolled back by
+        // the drag's cached basis: resync it to the new view
+        d.vx += -e.deltaX;
+        d.vy += -e.deltaY;
+      }
       const v = viewRef.current;
       if (e.ctrlKey || e.metaKey) {
         const rect = el.getBoundingClientRect();
@@ -127,8 +152,12 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
     const el = hostRef.current;
     if (!el) return;
     const onMiddle = (e: PointerEvent) => {
-      if (e.button !== 1) return;
+      // middle button exists only on mice; ignore other pointer types
+      if (e.pointerType !== "mouse" || e.button !== 1) return;
+      // always suppress the browser's autoscroll cursor, even when we do
+      // not take over, so an in-flight drag is never eaten by this handler
       e.preventDefault();
+      if (drag.current) return;
       e.stopPropagation();
       const v = viewRef.current;
       drag.current = { mode: "pan", sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y };

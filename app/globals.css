@@ -558,6 +558,7 @@ body {
 }
 
 .canvas-prefs {
+  /* above canvas content and, on wrap, the toolbar branch (z-index 30) */
   position: absolute;
   right: 0;
   bottom: 34px;
@@ -609,7 +610,16 @@ body {
   color: var(--text-1);
 }
 
-/* light canvas surface: same dot grid, inverted */
+/* light canvas surface: same dot grid, inverted; screen chrome keeps its
+ * dark panel, so labels and delete buttons get light-surface colors too */
+.canvas-host.prefs-light .screen-name {
+  color: #333;
+}
+
+.canvas-host.prefs-light .screen-del {
+  background: rgba(0, 0, 0, 0.07);
+  color: #333;
+}
 .canvas-host.prefs-light {
   background:
     radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.09) 1px, transparent 1.5px) 0 0 / 24px 24px,
