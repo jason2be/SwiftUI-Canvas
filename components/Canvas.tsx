@@ -107,7 +107,7 @@ export default function Canvas({ editor, onOpenIcon, placeRef }: Props) {
   // space held => temporary hand
   useEffect(() => {
     const dn = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !(e.target as HTMLElement)?.matches?.("input, textarea")) setSpace(true);
+      if (e.code === "Space" && !(e.target as HTMLElement)?.matches?.("input, textarea, select")) setSpace(true);
     };
     const up = (e: KeyboardEvent) => {
       if (e.code === "Space") setSpace(false);
@@ -680,7 +680,7 @@ function ZoomLevel({ z, lang, onPick }: { z: number; lang: Lang; onPick: (z: num
       title={t("zoom.level")}
       aria-label={t("zoom.level")}
     >
-      {!onLadder && <option value={pct}>{pct}%</option>}
+      {!onLadder && <option key={`x${pct}`} value={pct}>{pct}%</option>}
       {ZOOM_STEPS.map((step) => {
         const level = Math.round(step * 100);
         return (
